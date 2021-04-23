@@ -13,6 +13,7 @@ import time
 import sys
 import os
 from pprint import pprint
+import NIBRSLogger
 
 class SQLProcess:
 
@@ -31,6 +32,104 @@ class SQLProcess:
         self._charset = db_args['charset']
         self._conn = None
         self._cursor = None
+
+    # Establish connection to the database
+    def connect(self):
+
+        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+
+        # Connect to MySQL
+        if self.database_type == "mysql":
+
+            try:
+                if self._conn == None:
+                    self._conn = MySQLdb.connect(
+                        host = self._host,
+                        user = self._username,
+                        passwd = self._password,
+                        db = self._dbname,
+                        port = self._port,
+                        charset = self._charset
+                    )
+                    print("Connection to MySQL database established.")
+                    logger.info("Connection to MySQL database established.")
+
+                if self._cursor == None:
+                    self._cursor = self._conn.cursor()
+                    self._cursor.connection.autocommit(True)
+            except:
+                traceback.print_exc()
+                exit()
+
+        # Connect to PostgreSQL
+        if self.database_type == "postgresql":
+
+            if self._conn == None:
+                # Get a connection, if a connect cannot be made an exception will be raised here
+                self._conn = psycopg2.connect("host=" + self._host +  " dbname=" + self._dbname + " user=" + self._username + " password=" + self._password + " port=" + str(self._port))
+                self._conn.autocommit = True
+
+            if self._cursor == None:
+                # conn.cursor will return a cursor object, you can use this cursor to perform queries
+                self._cursor = self._conn.cursor()
+                print("Connection to PostgreSQL database established.")
+                logger.info("Connection to PostgreSQL database established.")
+
+            # Get a list of all tables available in the database
+            table_list = self.get_list_of_all_tables();
+
+
+    # Get a list of all tables in the NIBRS database
+    def get_list_of_all_tables(self):
+
+        # Set process time
+        start_time = time.time()
+
+        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+        print("[Checking database for list of all tables...]")
+        logger.info("[Checking database for list of all tables...]")
+
+        # Connect to database if not connected
+        if self._conn == None:
+            self.connect()
+
+        # Execute the query to check if file has been stared before
+        try:
+            # If using PostgreSQL
+            if self.database_type == "postgresql":
+                # Build query to get list of all tables in NIBRS database
+                get_table_list_sql = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'"
+                self._cursor.execute(get_table_list_sql)
+                # Check the count is true or false.
+                table_list = self._cursor.fetchall()
+                # Print list of tables found
+                for item in table_list:
+                    print("--  Table Found: " + item[1])
+            # MySQL
+            elif self.database_type == "mysql":
+                # Build query to get list of all tables in NIBRS database
+                get_table_list_sql = "SHOW TABLES"
+                self._cursor.execute(get_table_list_sql)
+                # Check the count is true or false.
+                table_list = self._cursor.fetchall()
+                # Print list of tables found
+                for item in table_list:
+                    print("--  Table Found: " + item[1])
+
+        except Exception as e:
+            # If there is an error and using databse postgresql
+            # Then rollback the commit??
+            if self.database_type == "postgresql":
+                self._conn.rollback()
+
+            # Print and log general fail comment
+            print("Database check for table list failed...")
+            logger.error("Database check for table list failed")
+            traceback.print_exc()
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
+
 
     # Load the insert query into the database
     def load(self, sql, args):
@@ -69,7 +168,7 @@ class SQLProcess:
         # Set the start time
         start_time = time.time()
 
-        logger = USPTOLogger.logging.getLogger("USPTO_Database_Construction")
+        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
         print('[Staring to load csv files in bulk to ' + args['database_type'] + ']')
         logger.info('Staring to load csv files in bulk to ' + args['database_type'])
 
@@ -92,7 +191,7 @@ class SQLProcess:
                 while bulk_insert_successful == False:
 
                     try:
-                        sql = "COPY uspto." + csv_file_obj['table_name'] + " FROM STDIN DELIMITER '|' CSV HEADER"
+                        sql = "COPY NIBRS." + csv_file_obj['table_name'] + " FROM STDIN DELIMITER '|' CSV HEADER"
                         #self._cursor.copy_from(open(csv_file['csv_file_name'], "r"), csv_file['table_name'], sep = "|", null = "")
                         self._cursor.copy_expert(sql, open(csv_file_obj['csv_file_name'], "r"))
                         # Return a successfull insertion flag
@@ -193,7 +292,7 @@ class SQLProcess:
         # Set process time
         start_time = time.time()
 
-        logger = USPTOLogger.logging.getLogger("USPTO_Database_Construction")
+        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
         print("[Checking database for previous attempt to process the " + call_type + " file: " + file_name + "...]")
         logger.info("[Checking database for previous attempt to process the " + call_type + " file:" + file_name + "...]")
 
@@ -205,7 +304,7 @@ class SQLProcess:
         table_name = "STARTED_FILES"
 
         # Build query to check the STARTED_FILES table to see if this file has been started already.
-        check_file_started_sql = "SELECT COUNT(*) as count FROM uspto." + table_name + " WHERE FileName = '" + file_name + "' LIMIT 1"
+        check_file_started_sql = "SELECT COUNT(*) as count FROM NIBRS." + table_name + " WHERE FileName = '" + file_name + "' LIMIT 1"
 
         # Execute the query to check if file has been stared before
         try:
@@ -221,8 +320,8 @@ class SQLProcess:
             if self.database_type == "postgresql":
                 self._conn.rollback()
 
-            print("Database check if " + call_type + " file started failed... " + file_name + " from table: uspto.STARTED_FILES")
-            logger.error("Database check if " + call_type + " file started failed... " + file_name + " from table: uspto.STARTED_FILES")
+            print("Database check if " + call_type + " file started failed... " + file_name + " from table: NIBRS.STARTED_FILES")
+            logger.error("Database check if " + call_type + " file started failed... " + file_name + " from table: NIBRS.STARTED_FILES")
             traceback.print_exc()
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -232,12 +331,12 @@ class SQLProcess:
         if check_file_started[0] == 0:
             # Insert the file_name into the table keeping track of STARTED_FILES
             if self.database_type == "postgresql":
-                insert_file_started_sql = "INSERT INTO uspto." + table_name + "  (FileName) VALUES($$" + file_name + "$$)"
+                insert_file_started_sql = "INSERT INTO NIBRS." + table_name + "  (FileName) VALUES($$" + file_name + "$$)"
             elif self.database_type == "mysql":
-                insert_file_started_sql = "INSERT INTO uspto." + table_name + " (FileName) VALUES('" + file_name + "')"
+                insert_file_started_sql = "INSERT INTO NIBRS." + table_name + " (FileName) VALUES('" + file_name + "')"
 
-            print("No previous attempt found to process the " + call_type + " file: " + file_name + " in table: uspto.STARTED_FILES")
-            logger.info("No previous attempt found to process the " + call_type + " file:" + file_name + " in table: uspto.STARTED_FILES")
+            print("No previous attempt found to process the " + call_type + " file: " + file_name + " in table: NIBRS.STARTED_FILES")
+            logger.info("No previous attempt found to process the " + call_type + " file:" + file_name + " in table: NIBRS.STARTED_FILES")
 
             # Insert the record into the database that the file has been started.
             try:
@@ -248,8 +347,8 @@ class SQLProcess:
                 # Then rollback the commit??
                 if self.database_type == "postgresql":
                     self._conn.rollback()
-                print("Database check for previous attempt to process " + call_type + " file failed... " + file_name + " into table: uspto.STARTED_FILES")
-                logger.error("Database check for previous attempt to process " + call_type + " file failed... " + file_name + " into table: uspto.STARTED_FILES")
+                print("Database check for previous attempt to process " + call_type + " file failed... " + file_name + " into table: NIBRS.STARTED_FILES")
+                logger.error("Database check for previous attempt to process " + call_type + " file failed... " + file_name + " into table: NIBRS.STARTED_FILES")
                 traceback.print_exc()
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -260,8 +359,8 @@ class SQLProcess:
         # delete all the records of that file in all tables.
         elif check_file_started[0] != 0:
 
-            print("Found previous attempt to process the " + call_type + " file: " + file_name + " in table: uspto.STARTED_FILES")
-            logger.info("Found previous attempt to process the " + call_type + " file:" + file_name + " in table: uspto.STARTED_FILES")
+            print("Found previous attempt to process the " + call_type + " file: " + file_name + " in table: NIBRS.STARTED_FILES")
+            logger.info("Found previous attempt to process the " + call_type + " file:" + file_name + " in table: NIBRS.STARTED_FILES")
 
             # Build array to hold all table names to have
             # records deleted for patent grants
@@ -325,14 +424,14 @@ class SQLProcess:
                     "PARTY_L"
                 ]
 
-            print("Starting to remove previous attempt to process the " + call_type + " file: " + file_name + " in table: uspto.STARTED_FILES")
-            logger.info("Starting to remove previous attempt to process the " + call_type + " file:" + file_name + " in table: uspto.STARTED_FILES")
+            print("Starting to remove previous attempt to process the " + call_type + " file: " + file_name + " in table: NIBRS.STARTED_FILES")
+            logger.info("Starting to remove previous attempt to process the " + call_type + " file:" + file_name + " in table: NIBRS.STARTED_FILES")
 
             # Loop through each table_name defined by call_type
             for table_name in table_name_array:
 
                 # Build the SQL query here
-                remove_previous_record_sql = "DELETE FROM uspto." + table_name + " WHERE FileName = '" + file_name + "'"
+                remove_previous_record_sql = "DELETE FROM NIBRS." + table_name + " WHERE FileName = '" + file_name + "'"
 
                 # Set flag to determine if the query was successful
                 records_deleted = False

@@ -1,0 +1,24 @@
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+######################
+LOG/old_log_files
+LOG/old_link_files
+*.log
+
+# Temp Storage Directory
+########################
+/TMP/*
+/TMP/downloads/*
+
+# Ignnore Python .pyc files
+###########################
+*.pyc

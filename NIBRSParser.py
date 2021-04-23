@@ -15,6 +15,9 @@ import urllib
 import NIBRSLogger
 import SQLProcessor
 import time
+import ssl
+import shutil
+import zipfile
 
 # Get list of state codes from file
 def get_state_codes_from_file(args):
@@ -38,14 +41,16 @@ def get_link_list_from_log(args):
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
     print("-- Checking for existing link log file...")
     logger.info("-- Checking for existing link log file...")
+
     # Get existing log records
     link_list = []
     with open(args['link_log_file'], "r") as infile:
         for line in infile:
             line = line.split(",")
-            link_list.append({ "url" : line[0], "status" : line[1]})
+            link_list.append({ "url" : line[0], "status" : line[1].strip()})
     print("-- " + str(len(link_list)) + " existing links log found in log file...")
     logger.info("-- " + str(len(link_list)) + " existing links log found in log file...")
+
     return link_list
 
 # Write new link list to log file
@@ -111,15 +116,28 @@ def extract_zip_file(item, args):
 
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-    logger.info("[ Extracting downloaded NIBRS .zip file ]")
-    print("[ Extracting downloaded NIBRS .zip file ]")
+    logger.info("[ Extracting " + item['zip_filename'] + " NIBRS .zip file ]")
+    print("[ Extracting " + item['zip_filename'] + " NIBRS .zip file ]")
 
     # Check for directory to unzip contents to
     if not os.path.exists(item['extract_directory']):
         os.mkdir(item['extract_directory'])
-    with zipfile.ZipFile(item['dl_filename'], 'r') as zip_ref:
-        zip_ref.extractall(item['extract_directory'])
-    return True
+    # Unzip the downloaded file
+    try:
+        with zipfile.ZipFile(item['dl_filename'], 'r') as zip_ref:
+            zip_ref.extractall(item['extract_directory'])
+        # Return success state
+        return True
+    except Exception as e:
+        # Print and log general fail comment
+        print("-- Exception during extraction of " + item['dl_filename'])
+        logger.error("-- Exception during extraction of " + item['dl_filename'])
+        traceback.print_exc()
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
+        # Return failed state
+        return False
 
 # Process single link
 def process_single_link(item, args):
@@ -140,35 +158,58 @@ def process_single_link(item, args):
             shutil.copyfileobj(response, out_file)
 
     # Extract the downloaded zip file
-    extract_successs = extract_zip_file(item, args)
-    if extract_success :return True
+    extract_success = extract_zip_file(item, args)
+    if extract_success: return True
     else:
         os.remove(item['dl_filename'])
         return False
+
+# Process item into database
+def process_item_into_database(item, args):
+
+    # Include logger
+    logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+    logger.info("-- Starting to store " + item['base_filename'] + " to database...")
+    print("-- Starting to store " + item['base_filename'] + " to database...")
+
+
+
+
+
+    logger.info("-- Finished storing " + item['base_filename'] + " to database...")
+    print("-- Finished storing " + item['base_filename'] + " to database...")
+
+    return True
 
 # Process all links
 def process_all_links(args):
 
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-    logger.info("-- Process list of bulk data urls...")
+    logger.info("-- Starting to process list of bulk data urls...")
+    print("-- Starting to process list of bulk data urls...")
 
     for item in args['link_list']:
-        success = False
+        item_success = False
         # Get a filename and destination extracted data directory for item
         item['zip_filename'] = item['url'].split("/")[-1]
-        item['dl_filename'] = item['dl_dir'] + item['zip_filename']
-        item['extract_directory'] = item['dl_dir'] + item['zip_filename'].split(".")[0]
+        item['dl_filename'] = args['dl_dir'] + item['zip_filename']
+        item['base_filename'] = item['zip_filename'].split(".")[0]
+        item['extract_directory'] = args['dl_dir'] + item['zip_filename'].split(".")[0]
+
+        logger.info("-- Checking status of item: " + item['zip_filename'] + " - " + item['status'] + "...")
+        print("-- Checking status of item: " + item['zip_filename'] + " - " + item['status'] + "...")
 
         # Check if file donwloaded already
         if item['status'] == "Unprocessed":
-            while not success:
+            logger.info("-- Starting to process item: " + item['url'] + "...")
+            print("-- Starting to process item: " + item['url'] + "...")
+            while not item_success:
                 extract_success = process_single_link(item, args)
-                if extract_successs:
-                    process_item_into_database(item, args)
-                    successs = True
+                if extract_success:
+                    item_success = process_item_into_database(item, args)
         else:
-            logger.info("-- Skipping previously procesed link " + + "...")
+            logger.info("-- Skipping previously procesed link: " + item['url'] + "...")
 
 #
 # Main Function
@@ -196,15 +237,15 @@ if __name__ == "__main__":
 
     # Database args
     database_args = {
-        #"database_type" : "postgresql", # choose 'mysql' or 'postgresql'
-        "database_type" : "mysql", # choose 'mysql' or 'postgresql'
+        "database_type" : "postgresql", # choose 'mysql' or 'postgresql'
+        #"database_type" : "mysql", # choose 'mysql' or 'postgresql'
         "host" : "127.0.0.1",
-        #"port" : 5432, # PostgreSQL port
-        "port" : 3306, # MySQL port
-        "user" : "uspto",
-        #"passwd" : "Ld58KimTi06v2PnlXTFuLG4", # PostgreSQL password
-        "passwd" : "R5wM9N5qCEU3an#&rku8mxrVBuF@ur", # MySQL password
-        "db" : "uspto",
+        "port" : 5432, # PostgreSQL port
+        #"port" : 3306, # MySQL port
+        "user" : "nibrs",
+        "passwd" : "Ld58KimTi06v2PnlXTFuLG4", # PostgreSQL password
+        #"passwd" : "R5wM9N5qCEU3an#&rku8mxrVBuF@ur", # MySQL password
+        "db" : "nibrs",
         "charset" : "utf8"
     }
 
@@ -237,6 +278,11 @@ if __name__ == "__main__":
     NIBRSLogger.setup_logger(args['log_level'], app_log_file)
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+
+    # Create a database connection
+    database_connection = SQLProcessor.SQLProcess(database_args)
+    database_connection.connect()
+    args['database_connection'] = database_connection
 
     # Build list of links
     args['link_list'] = get_link_list(args)
