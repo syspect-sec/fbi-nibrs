@@ -4,7 +4,7 @@
 # Author: Joseph Lee
 # Email: joseph@ripplesoftware.ca
 # Website: www.ripplesoftware.ca
-# Github: www.github.com/rippledj/nibrs
+# Github: www.github.com/rippledj/fbi-nibrs
 
 # Import Python Modules
 import logging

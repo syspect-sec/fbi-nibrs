@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License along with thi
 ## **Description:**
 The script requires Python 3.6 or higher and will not work properly with Python 2.
 
-The script is run from the command line and will populate a PostgreSQL or MySQL database with the FBI NIBRS data. It is recommended to use PostgreSQL since PG provides better performance over the large data-set.  The data is downloaded from an Amazon AWS instance run by the FBI.  The data files can be downloaded one at a time from https://www.fbi.gov/services/cjis/ucr/nibrs.
+The script is run from the command line and will populate a PostgreSQL or MySQL database with the FBI NIBRS data. It is recommended to use PostgreSQL since PG provides better performance over the large data-set.  The data is downloaded from an Amazon AWS instance run by the FBI.  The data files can be downloaded one at a time from https://crime-data-explorer.fr.cloud.gov/downloads-and-docs.
 
 The usage of the script is outlined below:
 
