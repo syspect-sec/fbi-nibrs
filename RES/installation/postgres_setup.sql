@@ -705,6 +705,8 @@ CREATE USER nibrs LOGIN PASSWORD 'Ld58KimTi06v2PnlXTFuLG4';
 
 -- Change the owner of uspto database to uspto user
 ALTER DATABASE nibrs OWNER TO nibrs;
+ALTER SCHEMA nibrs OWNER to nibrs;
+ALTER DATABASE nibrs SET search_path TO nibrs;
 
 -- Grant privileges to all corresponding databases
 GRANT USAGE ON SCHEMA nibrs TO nibrs;

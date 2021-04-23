@@ -33,6 +33,9 @@ class SQLProcess:
         self._conn = None
         self._cursor = None
 
+        # Track whether data tables have been inserted or not
+        self.inserted_data_tables = []
+
     # Establish connection to the database
     def connect(self):
 
@@ -137,6 +140,10 @@ class SQLProcess:
         # Include logger
         logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
 
+        # Get a list of table names
+        all_table_names = get_all_table_names(args)
+        data_table_names = get_data_table_names(args)
+
         # Connect to database if not connected
         if self._conn == None:
             self.connect()
@@ -163,23 +170,32 @@ class SQLProcess:
 
     # This function accepts an array of csv files which need to be inserted
     # using COPY command in postgresql and LOAD INFILE in MySQL
-    def load_csv_bulk_data(self, args, data_type, csv_file_obj):
+    def load_csv_bulk_data(self, item, args):
 
         # Set the start time
         start_time = time.time()
 
         logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-        print('[Staring to load csv files in bulk to ' + args['database_type'] + ']')
-        logger.info('Staring to load csv files in bulk to ' + args['database_type'])
+        print('[Staring to load csv files in bulk to ' + self.database_type + ']')
+        logger.info('Staring to load csv files in bulk to ' + self.database_type)
 
-        # Connect to database if not connected
-        if self._conn == None:
-            self.connect()
+        # Get a list of table names
+        all_table_names = self.get_all_table_names(args)
+        data_table_names = self.get_data_table_names(args)
 
-        if "table_name" in csv_file_obj:
+        # Extract the table name
+        item['table_name'] = item['filename'].split(".")[0]
+
+        # Check that table name is in all table names
+        if item['table_name'] in all_table_names and item['table_name'] not in self.inserted_data_tables:
+
             # Print message to stdout and log about which table is being inserted
-            print("Database bulk load query started for: " + data_type + " from filename: " + csv_file_obj['csv_file_name'])
-            logger.info("Database bulk load query started for: " + data_type + " from filename: " + csv_file_obj['csv_file_name'])
+            print("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name']  + " - " + item['filename'])
+            logger.info("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name'] + " - " + item['filename'])
+
+            # Connect to database if not connected
+            if self._conn == None:
+                self.connect()
 
             # If postgresql build query
             if self.database_type == "postgresql":
@@ -191,19 +207,26 @@ class SQLProcess:
                 while bulk_insert_successful == False:
 
                     try:
-                        sql = "COPY NIBRS." + csv_file_obj['table_name'] + " FROM STDIN DELIMITER '|' CSV HEADER"
+                        sql = "COPY nibrs." + item['table_name'] + " FROM STDIN DELIMITER ',' CSV HEADER"
                         #self._cursor.copy_from(open(csv_file['csv_file_name'], "r"), csv_file['table_name'], sep = "|", null = "")
-                        self._cursor.copy_expert(sql, open(csv_file_obj['csv_file_name'], "r"))
+                        self._cursor.copy_expert(sql, open(item['full_filepath'], "r"))
                         # Return a successfull insertion flag
                         bulk_insert_successful = True
+
+                        # If table was data table, add the table name to inserted data tables
+                        if item['table_name'] in data_table_names and item['table_name'] not in self.inserted_data_tables:
+                            self.inserted_data_tables.append(item['table_name'])
+                            # Print message to stdout and log
+                            print("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['filename'])
+                            logger.info("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['filename'])
 
                     except Exception as e:
                         # Roll back the transaction
                         self._conn.rollback()
                         # Increment the failed counter
                         bulk_insert_failed_attempts += 1
-                        print("Database bulk load query failed... " + csv_file_obj['csv_file_name'] + " into table: " + csv_file_obj['table_name'])
-                        logger.error("Database bulk load query failed..." + csv_file_obj['csv_file_name'] + " into table: " + csv_file_obj['table_name'])
+                        print("Database bulk load query failed for " + item['base_filename'] + "... " + item['filename'] + " into table: " + item['table_name'])
+                        logger.error("Database bulk load query failed for " + item['base_filename'] + "... " + item['filename'] + " into table: " + item['table_name'])
                         print("Query string: " + sql)
                         logger.error("Query string: " + sql)
                         traceback.print_exc()
@@ -212,16 +235,6 @@ class SQLProcess:
                         logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
                         # If the cause was a dupllicate entry error, then try to clean the file
                         traceback_array = traceback.format_exc().splitlines()
-                        for line in traceback_array:
-                            if "duplicate key" in line:
-                                # Insert the csv file item by item
-                                #self.insert_csv_item_by_item(csv_file_obj['csv_file_name'], args)
-                                # Remove the offending line from csv file
-                                self.remove_item_from_csv(traceback_array, csv_file_obj['csv_file_name'], "duplicate_key_violation")
-                            elif "violates not-null constraint" in line:
-                                # Remove the offending line from csv file
-                                self.remove_item_from_csv(traceback_array, csv_file_obj['csv_file_name'], "not_null_violation")
-
 
                         # Return a unsucessful flag
                         if bulk_insert_failed_attempts > 20:
@@ -241,7 +254,7 @@ class SQLProcess:
                         # TODO: consider "SET foreign_key_checks = 0" to ignore
                         # TODO: LOCAL is used to set duplicate key to warning instead of error
                         # TODO: IGNORE is also used to ignore rows that violate duplicate unique key constraints
-                        bulk_insert_sql = "LOAD DATA LOCAL INFILE '" + csv_file_obj['csv_file_name'] + "' INTO TABLE " + csv_file_obj['table_name'] + " FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n' IGNORE 1 LINES"
+                        bulk_insert_sql = "LOAD DATA LOCAL INFILE '" + item['full_filepath'] + "' INTO TABLE " + item['table_name'] + " FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES"
                         bulk_insert_sql = bulk_insert_sql.replace("\\", "/")
 
                         # Execute the query built above
@@ -264,6 +277,12 @@ class SQLProcess:
                         # Return a unsucessful flag
                         if bulk_insert_failed_attempts > 8:
                             return False
+
+        # If the table is data table and already inserted
+        else:
+            # Print message to stdout and log about which table is being inserted
+            print("Data table already inserted into database: " + item['table_name'] + " - " + item['filename'])
+            logger.info("Data table already inserted into database: " + item['table_name'] + " - " + item['filename'])
 
         # Return a successfull message from the database query insert.
         return True
@@ -462,3 +481,35 @@ class SQLProcess:
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                         logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
+
+
+    # Get accepted table names
+    def get_all_table_names(self, args):
+
+        # Include logger
+        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+        logger.info("-- Getting list of all table names from file...")
+        print("-- Getting list of all table names from file...")
+
+        all_table_names = []
+        with open(args['all_table_names_file'], "r") as infile:
+            for line in infile:
+                all_table_names.append(line.replace('\n', ''))
+        #print(all_table_names)
+        return all_table_names
+
+
+    # Get accepted table names
+    def get_data_table_names(self, args):
+
+        # Include logger
+        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+        logger.info("-- Getting list of data table names from file...")
+        print("-- Getting list of data table names from file...")
+
+        data_table_names = []
+        with open(args['data_table_names_file'], "r") as infile:
+            for line in infile:
+                data_table_names.append(line.replace('\n', ''))
+        #print(data_table_names)
+        return data_table_names

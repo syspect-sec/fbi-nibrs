@@ -19,6 +19,7 @@ import ssl
 import shutil
 import zipfile
 
+
 # Get list of state codes from file
 def get_state_codes_from_file(args):
 
@@ -32,8 +33,18 @@ def get_state_codes_from_file(args):
         for line in infile:
             line = line.split(",")
             state_codes.append(line[0].replace('"', ''))
-    print(state_codes)
+    #print(state_codes)
     return state_codes
+
+# Get a list of all .csv files in a directory and return list
+def get_csv_files_from_directory(item):
+    csv_files = []
+    # Get list of files in extracted directory
+    all_files = os.listdir(item['extract_directory'])
+    for item in all_files:
+        if item.split(".")[-1] == "csv" or item.split(".")[-1] == "CSV":
+            csv_files.append(item)
+    return csv_files
 
 # Get link list from log file
 def get_link_list_from_log(args):
@@ -172,9 +183,14 @@ def process_item_into_database(item, args):
     logger.info("-- Starting to store " + item['base_filename'] + " to database...")
     print("-- Starting to store " + item['base_filename'] + " to database...")
 
-
-
-
+    # Get list of .csv files in the unzipped directory
+    # Each directory also contains an .SQL file
+    csv_files = get_csv_files_from_directory(item)
+    # Load the csv files into database
+    for csv_file in csv_files:
+        item['filename'] =  csv_file
+        item['full_filepath'] = item['extract_directory'] + "/" + csv_file
+        args['db_conn'].load_csv_bulk_data(item, args)
 
     logger.info("-- Finished storing " + item['base_filename'] + " to database...")
     print("-- Finished storing " + item['base_filename'] + " to database...")
@@ -234,6 +250,8 @@ if __name__ == "__main__":
     # Declare file locations
     dl_dir = cwd + "TMP/downloads/"
     state_codes = cwd + "RES/abbr-name.csv"
+    all_table_names_file = cwd + "RES/all_table_names.txt"
+    data_table_names_file = cwd + "RES/data_table_names.txt"
 
     # Database args
     database_args = {
@@ -260,6 +278,8 @@ if __name__ == "__main__":
         "default_threads" : default_threads,
         "dl_dir" : dl_dir,
         "state_codes" : state_codes,
+        "all_table_names_file" : all_table_names_file,
+        "data_table_names_file" : data_table_names_file,
         "start_year" : 1991,
         "end_year" : 2020,
         "database_args" : database_args,
@@ -280,9 +300,9 @@ if __name__ == "__main__":
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
 
     # Create a database connection
-    database_connection = SQLProcessor.SQLProcess(database_args)
-    database_connection.connect()
-    args['database_connection'] = database_connection
+    db_conn = SQLProcessor.SQLProcess(database_args)
+    db_conn.connect()
+    args['db_conn'] = db_conn
 
     # Build list of links
     args['link_list'] = get_link_list(args)
