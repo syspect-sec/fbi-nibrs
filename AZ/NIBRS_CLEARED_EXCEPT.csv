@@ -1,0 +1,7 @@
+"CLEARED_EXCEPT_ID","CLEARED_EXCEPT_CODE","CLEARED_EXCEPT_NAME","CLEARED_EXCEPT_DESC"
+1,"A","Death of Offender","Death of Offender"
+2,"B","Prosecution Declined","Prosecution Declined (by the prosecutor for a reason other than lack of probable cause)"
+3,"C","In Custody of Other Jurisdiction","In Custody of Other Jurisdiction"
+4,"D","Victim Refused to Cooperate","Victim Refused to Cooperate (in the prosecution)"
+5,"E","Juvenile/No Custody","Juvenile/No Custody (the handling of a juvenile without taking him/her into custody, but rather by oral or written notice given to the parents or legal guardian in a case involving a minor offense, such as petty larceny)"
+6,"N","Not Applicable","Not Applicable (not cleared exceptionally)"

@@ -1,0 +1,17 @@
+nibrs_arrestee
+nibrs_arrestee_weapon
+nibrs_bias_motivation
+nibrs_month
+nibrs_incident
+nibrs_offender
+nibrs_offense
+nibrs_property
+nibrs_property_desc
+nibrs_suspect_using
+nibrs_suspected_drug
+nibrs_victim
+nibrs_victim_circumstances
+nibrs_victim_injury
+nibrs_victim_offender_rel
+nibrs_victim_offense
+nibrs_weapon

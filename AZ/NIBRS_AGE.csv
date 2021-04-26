@@ -1,0 +1,8 @@
+"AGE_ID","AGE_CODE","AGE_NAME"
+1,"NN","Under 24 Hours"
+2,"NB","1-6 Days Old"
+3,"BB","7-364 Days Old"
+4,"00","Unknown"
+5,"AG","Age in Years"
+6,"99","Over 98 Years Old"
+0,"NS","Not Specified"

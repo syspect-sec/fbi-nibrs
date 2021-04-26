@@ -1,0 +1,8 @@
+"ASSIGNMENT_TYPE_ID","ASSIGNMENT_TYPE_CODE","ASSIGNMENT_TYPE_NAME"
+1,"F","Two-Officer Vehicle"
+2,"G","One-Officer (Alone)"
+3,"H","One-Officer (Assisted)"
+4,"I","Detective or Special Assignment (Alone)"
+5,"J","Detective or Special Assignment (Assisted)"
+6,"K","Other (Alone)"
+7,"L","Other (Assisted)"

@@ -1,6 +1,8 @@
--- This file is used to setup the database tables and load the NIBRS
--- code lookup tables. It only needs to be run once before you load
--- any data tables using postgres_load.sql
+-- This file is a modified version of the files that are included
+-- with each NIBRS .zip download from: https://crime-data-explorer.fr.cloud.gov/downloads-and-docs
+-- It is used to setup the database tables that NIBRSParser.py will
+-- load the data into. It only needs to be run once before you load any data tables
+-- using postgres_load.sql
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -26,9 +28,79 @@ DROP SCHEMA IF EXISTS nibrs CASCADE;
 CREATE SCHEMA IF NOT EXISTS nibrs;
 
 -- -----------------------------------------------------
--- Create Tables
+-- Create Code Tables
 -- -----------------------------------------------------
 
+-- This is not a standard UCR table but one derived from the reta_month/nibrs_month
+-- This code table is for files before 2016
+CREATE TABLE nibrs.agency_participation (
+  year smallint NOT NULL,
+  state_name character varying(100),
+  state_abbr character varying(2),
+  agency_id bigint NOT NULL,
+  agency_ori character(9),
+  agency_name character varying(100),
+  agency_population bigint,
+  population_group_code character varying(2),
+  population_group character varying(150),
+  reported integer,
+  months_reported integer,
+  nibrs_reported integer,
+  nibrs_months_reported integer,
+  covered integer,
+  participated integer,
+  nibrs_participated integer
+);
+
+-- This code table is for files before 2016
+CREATE TABLE nibrs.cde_agencies (
+  agency_id bigint NOT NULL,
+  ori character(9) NOT NULL,
+  legacy_ori character(9) NOT NULL,
+  agency_name text,
+  short_name text,
+  agency_type_id smallint NOT NULL,
+  agency_type_name text,
+  tribe_id bigint,
+  campus_id bigint,
+  city_id bigint,
+  city_name text,
+  state_id smallint NOT NULL,
+  state_abbr character(2) NOT NULL,
+  primary_county_id bigint,
+  primary_county text,
+  primary_county_fips character varying(5),
+  agency_status character(1),
+  submitting_agency_id bigint,
+  submitting_sai character varying(9),
+  submitting_name text,
+  submitting_state_abbr character varying(2),
+  start_year smallint,
+  dormant_year smallint,
+  current_year smallint,
+  revised_rape_start smallint,
+  current_nibrs_start_year smallint,
+  population bigint,
+  population_group_code character varying(2),
+  population_group_desc text,
+  population_source_flag character varying(1),
+  suburban_area_flag character varying(1),
+  core_city_flag character varying(1),
+  months_reported smallint,
+  nibrs_months_reported smallint,
+  past_10_years_reported smallint,
+  covered_by_id bigint,
+  covered_by_ori character(9),
+  covered_by_name character varying(100),
+  staffing_year smallint,
+  total_officers integer,
+  total_civilians integer,
+  icpsr_zip character(5),
+  icpsr_lat numeric,
+  icpsr_lng numeric
+);
+
+-- This code table is for files after 2015
 CREATE TABLE nibrs.agencies (
   yearly_agency_id integer,
   agency_id integer,
@@ -279,20 +351,23 @@ CREATE TABLE nibrs.nibrs_arrestee (
   under_18_disposition_code character(1),
   clearance_ind character(1),
   age_range_low_num smallint,
-  age_range_high_num smallint
+  age_range_high_num smallint,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_arrestee_weapon (
   data_year int,
   arrestee_id bigint NOT NULL,
   weapon_id smallint NOT NULL,
-  nibrs_arrestee_weapon_id bigint NOT NULL
+  nibrs_arrestee_weapon_id bigint NOT NULL,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_bias_motivation (
   data_year int,
   bias_id smallint NOT NULL,
-  offense_id bigint NOT NULL
+  offense_id bigint NOT NULL,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_month (
@@ -308,7 +383,8 @@ CREATE TABLE nibrs.nibrs_month (
   data_home character varying(10),
   ddocname character varying(50),
   did bigint,
-  month_pub_status int
+  month_pub_status int,
+  source_code character varying(10)
 );
 
 COMMENT ON COLUMN nibrs.nibrs_month.orig_format IS 'This is the format the report was in when it was first submitted to the system.  F for Flat File, W for Web Form, U for IEPDXML Upload, S for IEPDXML Service, B for BPEL, N for null or unavailable, and M for Multiple. When summarizing NIBRS data into the _month tables, a single months data could come from multiple sources.  If so the entry will be M';
@@ -329,7 +405,8 @@ CREATE TABLE nibrs.nibrs_incident (
   incident_status smallint,
   data_home character(1),
   orig_format character(1),
-  did bigint
+  did bigint,
+  source_code character varying(10)
 );
 
 COMMENT ON COLUMN nibrs.nibrs_incident.orig_format IS 'This is the format the report was in when it was first submitted to the system.  F for Flat File, W for Web Form, U for IEPDXML Upload, S for IEPDXML Service, B for BPEL, N for null or unavailable.';
@@ -346,7 +423,8 @@ CREATE TABLE nibrs.nibrs_offender (
   race_id smallint,
   ethnicity_id smallint,
   age_range_low_num smallint,
-  age_range_high_num smallint
+  age_range_high_num smallint,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_offense (
@@ -357,7 +435,8 @@ CREATE TABLE nibrs.nibrs_offense (
   attempt_complete_flag character(1),
   location_id bigint NOT NULL,
   num_premises_entered smallint,
-  method_entry_code character(1)
+  method_entry_code character(1),
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_property (
@@ -375,13 +454,15 @@ CREATE TABLE nibrs.nibrs_property_desc (
   prop_desc_id smallint NOT NULL,
   property_value bigint,
   date_recovered timestamp without time zone,
-  nibrs_prop_desc_id bigint NOT NULL
+  nibrs_prop_desc_id bigint NOT NULL,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_suspect_using (
   data_year int,
   suspect_using_id smallint NOT NULL,
-  offense_id bigint NOT NULL
+  offense_id bigint NOT NULL,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_suspected_drug (
@@ -390,7 +471,8 @@ CREATE TABLE nibrs.nibrs_suspected_drug (
   property_id bigint NOT NULL,
   est_drug_qty double precision,
   drug_measure_type_id smallint,
-  nibrs_suspected_drug_id bigint NOT NULL
+  nibrs_suspected_drug_id bigint NOT NULL,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_victim (
@@ -409,20 +491,23 @@ CREATE TABLE nibrs.nibrs_victim (
   ethnicity_id smallint,
   resident_status_code character(1),
   age_range_low_num smallint,
-  age_range_high_num smallint
+  age_range_high_num smallint,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_victim_circumstances (
   data_year int,
   victim_id bigint NOT NULL,
   circumstances_id smallint NOT NULL,
-  justifiable_force_id smallint
+  justifiable_force_id smallint,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_victim_injury (
   data_year int,
   victim_id bigint NOT NULL,
-  injury_id smallint NOT NULL
+  injury_id smallint NOT NULL,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_victim_offender_rel (
@@ -430,25 +515,28 @@ CREATE TABLE nibrs.nibrs_victim_offender_rel (
   victim_id bigint NOT NULL,
   offender_id bigint NOT NULL,
   relationship_id smallint NOT NULL,
-  nibrs_victim_offender_id bigint NOT NULL
+  nibrs_victim_offender_id bigint NOT NULL,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_victim_offense (
   data_year int,
   victim_id bigint NOT NULL,
-  offense_id bigint NOT NULL
+  offense_id bigint NOT NULL,
+  source_code character varying(10)
 );
 
 CREATE TABLE nibrs.nibrs_weapon (
   data_year int,
   weapon_id smallint NOT NULL,
   offense_id bigint NOT NULL,
-  nibrs_weapon_id bigint NOT NULL
+  nibrs_weapon_id bigint NOT NULL,
+  source_code character varying(10)
 );
 
-CREATE TABLE IF NOT EXISTS nibrs.STARTED_FILES (
-  FileName VARCHAR(45),
-  PRIMARY KEY (FileName)
+CREATE TABLE IF NOT EXISTS nibrs.started_files (
+  source_code character varying(10),
+  PRIMARY KEY (source_code)
 );
 
 --Create PKs and FKs

@@ -183,8 +183,9 @@ class SQLProcess:
         all_table_names = self.get_all_table_names(args)
         data_table_names = self.get_data_table_names(args)
 
-        # Extract the table name
+        # Extract the table name and change to lower-case
         item['table_name'] = item['filename'].split(".")[0]
+        item['table_name'] = item['table_name'].lower()
 
         # Check that table name is in all table names
         if item['table_name'] in all_table_names and item['table_name'] not in self.inserted_data_tables:

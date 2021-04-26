@@ -1,0 +1,39 @@
+data-type,table_name,action,column_name,location,data_contents
+OLD,nibrs_bias_list,ADD,bias_desc,LAST,NULL
+OLD,nibrs_offense_type,ADD,offense_group,LAST,NULL
+OLD,nibrs_cleared_except,ADD,cleared_except_desc,LAST,NULL
+OLD,nibrs_criminal_act,ADD,data_year,FIRST,YEAR
+OLD,nibrs_criminal_act_type,ADD,criminal_act_desc,LAST,NULL
+NEW,nibrs_ethnicity,ADD,hc_flag,LAST,NULL
+OLD,nibrs_prop_loss_type,ADD,prop_loss_desc,LAST,NULL
+OLD,ref_state,ADD,change_user,LAST,NULL
+NEW,nibrs_arrestee,ADD,ff_line_number,AFTER clearance_ind,NULL
+NEW,nibrs_arrestee,ADD,arrest_num,AFTER arrestee_seq_num,NULL
+OLD,nibrs_arrestee,ADD,data_year,FIRST,YEAR
+OLD,nibrs_bias_motivation,ADD,data_year,FIRST,YEAR
+OLD,nibrs_month,DELETE,data_year,AFTER month_num
+OLD,nibrs_month,ADD,data_year,FIRST,YEAR
+OLD,nibrs_month,ADD,month_pub,LAST,NULL
+NEW,nibrs_month,DELETE,inc_data_year,AFTER month_num
+NEW,nibrs_month,ADD,prepared_date,AFTER report_date,NULL
+NEW,nibrs_month,ADD,ff_line_number,AFTER orig_format,NULL
+OLD,nibrs_incident,ADD,data_year,FIRST,NULL
+OLD,nibrs_incident,ADD,incident_number,FIRST,NULL
+OLD,nibrs_incident,ADD,ddocname,AFTER data_home,NULL
+OLD,nibrs_incident,ADD,ff_line_number,AFTER orig_format,NULL
+OLD,nibrs_offender,ADD,data_year,FIRST,YEAR
+NEW,nibrs_offender,ADD,ff_line_number,AFTER ethnicity_id,NULL
+OLD,nibrs_offense,ADD,data_year,FIRST,YEAR
+NEW,nibrs_offense,ADD,ff_line_number,LAST,NULL
+OLD,nibrs_property,ADD,data_year,FIRST,YEAR
+NEW,nibrs_property,ADD,ff_line_number,LAST,NULL
+OLD,nibrs_property_desc,ADD,data_year,FIRST,YEAR
+OLD,nibrs_suspect_using,ADD,data_year,FIRST,YEAR
+OLD,nibrs_victim,ADD,data_year,FIRST,YEAR
+NEW,nibrs_victim,ADD,agency_data_year,AFTER resident_status_code,NULL
+NEW,nibrs_victim,ADD,ff_line_number,AFTER agency_data_year,NULL
+OLD,nibrs_victim_circumstances,ADD,data_year,FIRST,YEAR
+OLD,nibrs_victim_injury,ADD,data_year,FIRST,YEAR
+OLD,nibrs_victim_offender_rel,ADD,data_year,FIRST,YEAR
+OLD,nibrs_victim_offense,ADD,data_year,FIRST,YEAR
+OLD,nibrs_weapon,ADD,data_year,FIRST,YEAR

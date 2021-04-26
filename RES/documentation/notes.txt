@@ -1,0 +1,211 @@
+DONE - Newer years have a sub-folder so need to check if .csv files are in subfolders
+- some older year .csv files do not have the year included as column and so error on number of columns
+  - Need to create function to add that to the
+- Can count columns for each year of files and check when year is not added
+DONE - Some files have double quote encapsulated some don't , could re-write all (????)
+
+- Should create a column for every table for filename and use STATE-YEAR-filename.csv
+-
+
+
+*** Table differences between AL-1991 and AL-2019 ***
+
+================================================
+AL-1991 uses code table agency_participation table (15 cols)
+AL-1991 uses code table cde_agencies table (43 cols)
+AL-2019 uses code table agencies table (38 cols)
+
+-- Notes:
+-- Only code tables have different table set.  Otherwise, all the main tables are the same list of tables.
+-- Some code tables need to be included for each state / data-type (old-new)
+
+
+*** Column differences between AL-1991 and AL-2019 ***
+
+-- Some tables (ex. AL-2019) have duplicate columns
+
+================================================
+AL-2919 nibrs_bias_list
+
+** Extra column (last)
+bias_desc character varying(100)
+
+================================================
+AL-2019 nibrs_offense_type
+
+** Extra column (last)
+offense_group character(5)
+
+================================================
+AL-2019 nibrs_cleared_except
+
+** Extra column (last)
+cleared_except_desc character varying(300)
+================================================
+AL-2019 nibrs_criminal_act
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_criminal_act_type
+
+** Extra column (last)
+criminal_act_desc character varying(300)
+================================================
+AL-1991 nibrs_ethnicity
+
+** Extra column (last)
+hc_flag character varying(1) DEFAULT 'Y'::character varying
+================================================
+AL-2019 nibrs_prop_loss_type
+
+** Extra column (last)
+prop_loss_desc character varying(250)
+================================================
+AL-2019 ref_state
+
+** Extra column (last)
+change_user character varying(100)
+================================================
+AL-1992  nibrs_arrestee
+
+** Extra column (after clearance_ind)
+ff_line_number bigint,
+
+** Extra column (after arrestee_seq_num)
+arrest_num character varying(12),
+================================================
+AL-2019 nibrs_arrestee
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_arrestee
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_bias_motivation
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_month
+
+** Extra column (first)
+data_year int,
+
+** Column changed name
+old (1991): data_year smallint NOT NULL,
+new (2019): inc_data_year int,
+
+** Extra column (last)
+month_pub_status int
+================================================
+AL-1991 nibrs_month
+
+** Extra column (after report_date)
+prepared_date timestamp without time zone,
+
+** Extra column (after orig_format)
+ff_line_number bigint,
+================================================
+AL-2019 nibrs_incident
+
+** Extra column (first)
+data_year int,
+================================================
+AL-1991 nibrs_incident
+
+** Extra column (after nibrs_month_id)
+incident_number character varying(15),
+
+** Extra column (after data_home)
+ddocname character varying(100),
+
+** Extra column (after orig_format)
+ff_line_number bigint,
+================================================
+AL-2019 nibrs_offender
+
+** Extra column (first)
+data_year int,
+================================================
+AL-1991 nibrs_offender
+
+** Extra column (after ethnicity_id)
+ff_line_number bigint,
+================================================
+AL-2019 nibrs_offense
+
+** Extra column (first)
+data_year int,
+================================================
+AL-1991 nibrs_offense
+
+** Extra column (last)
+ff_line_number bigint
+================================================
+AL-2019 nibrs_property
+
+** Extra column (first)
+data_year int,
+================================================
+AL-1991 nibrs_property
+
+** Extra column (last)
+ff_line_number bigint
+================================================
+AL-2019 nibrs_property_desc
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_suspect_using
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_suspected_drug
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_victim
+
+** Extra column (first)
+data_year int,
+================================================
+AL-1991 nibrs_victim
+
+** Extra column (after resident_status_code)
+agency_data_year smallint,
+
+** Extra column (after agency_data_year)
+ff_line_number bigint,
+================================================
+AL-2019 nibrs_victim_circumstances
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_victim_injury
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_victim_offender_rel
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_victim_offense
+
+** Extra column (first)
+data_year int,
+================================================
+AL-2019 nibrs_weapon
+
+** Extra column (first)
+data_year int,
+================================================

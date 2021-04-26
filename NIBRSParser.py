@@ -13,6 +13,7 @@ import traceback
 import requests
 import urllib
 import NIBRSLogger
+import NIBRSSanitizer
 import SQLProcessor
 import time
 import ssl
@@ -38,12 +39,29 @@ def get_state_codes_from_file(args):
 
 # Get a list of all .csv files in a directory and return list
 def get_csv_files_from_directory(item):
+
+    # Include logger
+    logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+    logger.info("-- Looking for .csv files in: " + item['extract_directory'] + "...")
+    print("-- Looking for .csv files in: " + item['extract_directory'] + "...")
+
     csv_files = []
     # Get list of files in extracted directory
-    all_files = os.listdir(item['extract_directory'])
-    for item in all_files:
-        if item.split(".")[-1] == "csv" or item.split(".")[-1] == "CSV":
-            csv_files.append(item)
+            all_files = os.listdir(item['extract_directory'])
+    for found in all_files:
+        if found.split(".")[-1] == "csv" or found.split(".")[-1] == "CSV":
+            csv_files.append(found)
+
+    # Check for directory that uses state code
+    if os.path.isdir(item['extract_directory'] + item['state_code']):
+        logger.info("-- Subdirectory " + item['state_code'] + " found while looking for .csv files...")
+        print("-- Subdirectory " + item['state_code'] + " found while looking for .csv files...")
+        all_files = os.listdir(item['extract_directory'] + item['state_code'])
+        for found in all_files:
+            if found.split(".")[-1] == "csv" or found.split(".")[-1] == "CSV":
+                csv_files.append(item['state_code'] + "/"+ found)
+
+    # Return list of .csv files
     return csv_files
 
 # Get link list from log file
@@ -77,6 +95,10 @@ def write_link_list_to_log(link_list, args):
 
     logger.info("-- Finished writing list of bulk data urls to log file...")
     print("-- Finished writing list of bulk data urls to log file...")
+
+# Mark the link url as processed in log file
+def mark_link_as_processed(link, args):
+    pass
 
 # Get a list of all links
 def get_link_list(args):
@@ -151,45 +173,42 @@ def extract_zip_file(item, args):
         return False
 
 # Process single link
-def process_single_link(item, args):
+def download_and_extract_single_link(link, args):
 
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
 
     # Download the file from Amazon AWS
-    if os.path.exists(item['dl_filename']):
-        logger.info("-- Previously downloaded bulk data found: " + item['dl_filename'] + "...")
-        print("-- Previously downloaded bulk data found: " + item['dl_filename'] + "...")
+    if os.path.exists(link['dl_filename']):
+        logger.info("-- Previously downloaded bulk data found: " + link['dl_filename'] + "...")
+        print("-- Previously downloaded bulk data found: " + link['dl_filename'] + "...")
 
     # If the file was not found donwloaded already
     else:
         # Set the context for SSL (not checking!)
         context = ssl.SSLContext()
-        with urllib.request.urlopen(item['url'], context=context) as response, open(item['dl_filename'], 'wb') as out_file:
+        with urllib.request.urlopen(link['url'], context=context) as response, open(link['dl_filename'], 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
 
     # Extract the downloaded zip file
-    extract_success = extract_zip_file(item, args)
+    extract_success = extract_zip_file(link, args)
     if extract_success: return True
     else:
-        os.remove(item['dl_filename'])
+        os.remove(link['dl_filename'])
         return False
 
 # Process item into database
-def process_item_into_database(item, args):
+def insert_item_into_database(item, args):
 
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
     logger.info("-- Starting to store " + item['base_filename'] + " to database...")
     print("-- Starting to store " + item['base_filename'] + " to database...")
 
-    # Get list of .csv files in the unzipped directory
-    # Each directory also contains an .SQL file
-    csv_files = get_csv_files_from_directory(item)
     # Load the csv files into database
-    for csv_file in csv_files:
+    for csv_file in item['csv_files']:
         item['filename'] =  csv_file
-        item['full_filepath'] = item['extract_directory'] + "/" + csv_file
+        item['full_filepath'] = item['extract_directory'] + csv_file
         args['db_conn'].load_csv_bulk_data(item, args)
 
     logger.info("-- Finished storing " + item['base_filename'] + " to database...")
@@ -205,27 +224,42 @@ def process_all_links(args):
     logger.info("-- Starting to process list of bulk data urls...")
     print("-- Starting to process list of bulk data urls...")
 
-    for item in args['link_list']:
-        item_success = False
-        # Get a filename and destination extracted data directory for item
-        item['zip_filename'] = item['url'].split("/")[-1]
-        item['dl_filename'] = args['dl_dir'] + item['zip_filename']
-        item['base_filename'] = item['zip_filename'].split(".")[0]
-        item['extract_directory'] = args['dl_dir'] + item['zip_filename'].split(".")[0]
+    for link in args['link_list']:
+        link_success = False
+        # Get a filename and destination extracted data directory for link
+        link['zip_filename'] = link['url'].split("/")[-1]
+        link['dl_filename'] = args['dl_dir'] + link['zip_filename']
+        link['base_filename'] = link['zip_filename'].split(".")[0]
+        link['extract_directory'] = args['dl_dir'] + link['zip_filename'].split(".")[0] + "/"
 
-        logger.info("-- Checking status of item: " + item['zip_filename'] + " - " + item['status'] + "...")
-        print("-- Checking status of item: " + item['zip_filename'] + " - " + item['status'] + "...")
+        # Get the state and year of each file
+        link['state_code'] = link['base_filename'].split("-")[0]
+        link['year'] = link['base_filename'].split("-")[1]
+
+        logger.info("-- Checking status of link: " + link['zip_filename'] + " - " + link['status'] + "...")
+        print("-- Checking status of link: " + link['zip_filename'] + " - " + link['status'] + "...")
 
         # Check if file donwloaded already
-        if item['status'] == "Unprocessed":
-            logger.info("-- Starting to process item: " + item['url'] + "...")
-            print("-- Starting to process item: " + item['url'] + "...")
-            while not item_success:
-                extract_success = process_single_link(item, args)
+        if link['status'] == "Unprocessed":
+            logger.info("-- Starting to process link: " + link['url'] + "...")
+            print("-- Starting to process link: " + link['url'] + "...")
+            while not link_success:
+                extract_success = download_and_extract_single_link(link, args)
                 if extract_success:
-                    item_success = process_item_into_database(item, args)
+                    insert_success = False
+                    # Get list of .csv files in the unzipped directory
+                    # Each directory also contains .SQL files
+                    link['csv_files'] = get_csv_files_from_directory(link, args)
+                    insert_success = NIBRSSanitizer.sanitize_csv_files(link, args)
+                    insert_success = insert_item_into_database(link, args)
+                    if insert_success: mark_link_as_processed(link, args)
+
+                else:
+                    logger.info("-- Failed to download and extract link: " + link['url'] + "...")
+                    print("-- Failed to download and extract link: " + link['url'] + "...")
         else:
-            logger.info("-- Skipping previously procesed link: " + item['url'] + "...")
+            logger.info("-- Skipping previously procesed link: " + link['url'] + "...")
+            print("-- Skipping previously procesed link: " + link['url'] + "...")
 
 #
 # Main Function
@@ -250,8 +284,9 @@ if __name__ == "__main__":
     # Declare file locations
     dl_dir = cwd + "TMP/downloads/"
     state_codes = cwd + "RES/abbr-name.csv"
-    all_table_names_file = cwd + "RES/all_table_names.txt"
-    data_table_names_file = cwd + "RES/data_table_names.txt"
+    main_table_names_file = cwd + "RES/main_table_names.txt"
+    code_table_names_file = cwd + "RES/code_table_names.txt"
+    adjustment_req_filename = cwd + "RES/adjustment_req_filename.txt"
 
     # Database args
     database_args = {
@@ -278,8 +313,9 @@ if __name__ == "__main__":
         "default_threads" : default_threads,
         "dl_dir" : dl_dir,
         "state_codes" : state_codes,
-        "all_table_names_file" : all_table_names_file,
-        "data_table_names_file" : data_table_names_file,
+        "main_table_names_file" : main_table_names_file,
+        "code_table_names_file" : code_table_names_file,
+        "adjustment_req_filename" : adjustment_req_filename,
         "start_year" : 1991,
         "end_year" : 2020,
         "database_args" : database_args,

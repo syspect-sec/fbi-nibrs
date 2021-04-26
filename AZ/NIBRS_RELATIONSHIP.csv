@@ -1,0 +1,28 @@
+"RELATIONSHIP_ID","RELATIONSHIP_CODE","RELATIONSHIP_NAME","RELATIONSHIP_TYPE_ID"
+1,"AQ","Victim Was Acquaintance",2
+2,"BE","Victim Was Babysittee",2
+3,"BG","Victim Was Boyfriend/Girlfriend",2
+4,"CF","Victim Was Child of Boyfriend or Girlfriend",2
+5,"CH","Victim Was Child",1
+6,"CS","Victim Was Common-Law Spouse",1
+7,"EE","Victim was Employee",2
+8,"ER","Victim was Employer",2
+9,"FR","Victim Was Friend",2
+10,"GC","Victim Was Grandchild",1
+11,"GP","Victim Was Grandparent",1
+12,"HR","Homosexual Relationship",2
+13,"IL","Victim Was In-law",1
+14,"NE","Victim Was Neighbor",2
+15,"OF","Victim Was Other Family Member",1
+16,"OK","Victim was Otherwise Known",2
+17,"PA","Victim Was Parent",1
+18,"RU","Relationship Unknown",4
+19,"SB","Victim Was Sibling",1
+20,"SC","Victim Was Stepchild",1
+21,"SE","Victim Was Spouse",1
+22,"SP","Victim Was Stepparent",1
+23,"SS","Victim Was Stepsibling",1
+24,"ST","Victim Was Stranger",3
+25,"VO","Victim Was Offender",4
+26,"XS","Victim was Ex-Spouse",2
+27,"XR","Victim Was Ex-Relationship (Ex-Boyfriend/Girlfriend)",2
