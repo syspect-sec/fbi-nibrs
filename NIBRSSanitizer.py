@@ -41,11 +41,12 @@ def sanitize_csv_files(item, args):
         adjustments = get_adjustment_requirements(csv_file, item, args)
         # If .csv file requires year column to be added
         if adjustments != None: apply_adjustments(csv_file, adjustments, item, args)
-        # Add the file_code column to the end of .csv
-        add_file_code_column(csv_file, item, args)
+
+    # Add the file_code column to the end of .csv
+    add_source_code_column(csv_file, item, args)
 
     # Return success
-    return True
+    return item
 
 # Return a list of adjustments to be made to file
 def get_adjustment_requirements(csv_file, item, args):
@@ -176,8 +177,8 @@ def get_file_encoding(item):
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
 
     special_encoding = {}
-
     pg_load_filename = "postgres_load.sql"
+
     # Get the filepath of the PostgreSQL load file for the item
     if os.path.exists(item['extract_directory'] + pg_load_filename):
         base_dl_dir = item['extract_directory']
@@ -231,8 +232,41 @@ def convert_csv_encoding(item):
             outfile.write(u)
 
 # Add a column to the end of the CSV file for the file_code
-def add_file_code_column(csv_file, item, args):
-    pass
+def add_source_code_column(csv_file, item, args):
+
+    # Include logger
+    logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+
+    # Loop through all csv files
+    for csv_file in item['csv_files']:
+
+        logger.info("-- Adding source_code column to .csv file: " + csv_file)
+        print("-- Adding source_code column to .csv file: " + csv_file)
+
+        # Open file and get headers, remove '"' and split on ","
+        with open(item['extract_directory'] + csv_file, "r") as infile:
+            contents = infile.readlines()
+
+        # Check if source_code column already added before
+        headers = contents[0]
+        headers = headers.split(",")
+        if "source_code" in headers:
+            logger.info("-- source_code column already found in .csv file: " + csv_file)
+            print("-- source_code column already found in .csv file: " + csv_file)
+        else:
+            # Open file and add column name to headers, add source_code column to each line
+            with open(item['extract_directory'] + csv_file, "w") as outfile:
+                # Loop throu contents change header and all other lines
+                line_num = 0
+                for line in contents:
+                    # Add the source_code column name to the header
+                    if line_num == 0:
+                        line = line.strip() + ",source_code\n"
+                        line_num += 1
+                    # Add the source code to all other lines
+                    else: line = line.strip() + "," + item['state_code'] + "-" + str(item['year']) + "\n"
+                    # Write the line to file
+                    outfile.write(line)
 
 # Apply any table requirement adjustments to the csv file
 def apply_adjustments(csv_file, adjustments, item, args):

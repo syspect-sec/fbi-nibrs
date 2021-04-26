@@ -141,8 +141,9 @@ class SQLProcess:
         logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
 
         # Get a list of table names
-        all_table_names = get_all_table_names(args)
-        data_table_names = get_data_table_names(args)
+        agency_table_names = self.get_agency_table_names(args)
+        code_table_names = self.get_code_table_names(args)
+        main_table_names = self.get_main_table_names(args)
 
         # Connect to database if not connected
         if self._conn == None:
@@ -180,15 +181,16 @@ class SQLProcess:
         logger.info('Staring to load csv files in bulk to ' + self.database_type)
 
         # Get a list of table names
-        all_table_names = self.get_all_table_names(args)
-        data_table_names = self.get_data_table_names(args)
+        agency_table_names = self.get_agency_table_names(args)
+        main_table_names_file = self.get_main_table_names(args)
+        code_table_names = self.get_code_table_names(args)
 
         # Extract the table name and change to lower-case
         item['table_name'] = item['filename'].split(".")[0]
         item['table_name'] = item['table_name'].lower()
 
         # Check that table name is in all table names
-        if item['table_name'] in all_table_names and item['table_name'] not in self.inserted_data_tables:
+        if item['table_name'] in main_table_names_file and item['table_name'] not in self.inserted_data_tables:
 
             # Print message to stdout and log about which table is being inserted
             print("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name']  + " - " + item['filename'])
@@ -215,7 +217,7 @@ class SQLProcess:
                         bulk_insert_successful = True
 
                         # If table was data table, add the table name to inserted data tables
-                        if item['table_name'] in data_table_names and item['table_name'] not in self.inserted_data_tables:
+                        if item['table_name'] in code_table_names and item['table_name'] not in self.inserted_data_tables:
                             self.inserted_data_tables.append(item['table_name'])
                             # Print message to stdout and log
                             print("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['filename'])
@@ -484,33 +486,49 @@ class SQLProcess:
                         logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
 
 
-    # Get accepted table names
-    def get_all_table_names(self, args):
+    # Get main table names
+    def get_main_table_names(self, args):
 
         # Include logger
         logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-        logger.info("-- Getting list of all table names from file...")
-        print("-- Getting list of all table names from file...")
+        logger.info("-- Getting list of main table names from file...")
+        print("-- Getting list of main table names from file...")
 
-        all_table_names = []
-        with open(args['all_table_names_file'], "r") as infile:
+        table_names = []
+        with open(args['main_table_names_file'], "r") as infile:
             for line in infile:
-                all_table_names.append(line.replace('\n', ''))
-        #print(all_table_names)
-        return all_table_names
+                table_names.append(line.replace('\n', ''))
+        #print(main_table_names)
+        return table_names
 
 
-    # Get accepted table names
-    def get_data_table_names(self, args):
+    # Get code table names
+    def get_code_table_names(self, args):
 
         # Include logger
         logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-        logger.info("-- Getting list of data table names from file...")
-        print("-- Getting list of data table names from file...")
+        logger.info("-- Getting list of code table names from file...")
+        print("-- Getting list of code table names from file...")
 
-        data_table_names = []
-        with open(args['data_table_names_file'], "r") as infile:
+        table_names = []
+        with open(args['code_table_names_file'], "r") as infile:
             for line in infile:
-                data_table_names.append(line.replace('\n', ''))
-        #print(data_table_names)
-        return data_table_names
+                table_names.append(line.replace('\n', ''))
+        #print(code_table_names)
+        return table_names
+
+
+    # Get agency table names
+    def get_agency_table_names(self, args):
+
+        # Include logger
+        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+        logger.info("-- Getting list of agency table names from file...")
+        print("-- Getting list of agency table names from file...")
+
+        table_names = []
+        with open(args['agency_table_names_file'], "r") as infile:
+            for line in infile:
+                table_names.append(line.replace('\n', ''))
+        #print(code_table_names)
+        return table_names

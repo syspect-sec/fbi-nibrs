@@ -1,6 +1,3 @@
-agency_participation
-cde_agencies
-agencies
 nibrs_activity_type
 nibrs_age
 nibrs_arrest_type

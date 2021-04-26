@@ -201,6 +201,8 @@ def download_and_extract_single_link(link, args):
 # Process item into database
 def insert_item_into_database(item, args):
 
+    return True
+    
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
     logger.info("-- Starting to store " + item['base_filename'] + " to database...")
@@ -251,8 +253,8 @@ def process_all_links(args):
                     # Get list of .csv files in the unzipped directory
                     # Each directory also contains .SQL files
                     link['csv_files'] = get_csv_files_from_directory(link, args)
-                    insert_success = NIBRSSanitizer.sanitize_csv_files(link, args)
-                    #insert_success = insert_item_into_database(link, args)
+                    link = NIBRSSanitizer.sanitize_csv_files(link, args)
+                    insert_success = insert_item_into_database(link, args)
                     if insert_success:
                         #mark_link_as_processed(link, args)
                         link_success = True
@@ -287,6 +289,7 @@ if __name__ == "__main__":
     # Declare file locations
     dl_dir = cwd + "TMP/downloads/"
     state_codes = cwd + "RES/abbr-name.csv"
+    agency_table_names_file = cwd + "RES/agency_table_names.txt"
     main_table_names_file = cwd + "RES/main_table_names.txt"
     code_table_names_file = cwd + "RES/code_table_names.txt"
     adjustment_req_filename = cwd + "RES/adjustment_req_filename.txt"
@@ -316,6 +319,7 @@ if __name__ == "__main__":
         "default_threads" : default_threads,
         "dl_dir" : dl_dir,
         "state_codes" : state_codes,
+        "agency_table_names_file" : agency_table_names_file,
         "main_table_names_file" : main_table_names_file,
         "code_table_names_file" : code_table_names_file,
         "adjustment_req_filename" : adjustment_req_filename,

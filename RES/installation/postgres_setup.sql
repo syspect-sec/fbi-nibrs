@@ -28,7 +28,7 @@ DROP SCHEMA IF EXISTS nibrs CASCADE;
 CREATE SCHEMA IF NOT EXISTS nibrs;
 
 -- -----------------------------------------------------
--- Create Code Tables
+-- Create Agency Tables
 -- -----------------------------------------------------
 
 -- This is not a standard UCR table but one derived from the reta_month/nibrs_month
@@ -162,6 +162,10 @@ CREATE TABLE nibrs.agencies (
   participated character varying(1),
   nibrs_participated character varying(1)
 );
+
+-- -----------------------------------------------------
+-- Create Code Tables
+-- -----------------------------------------------------
 
 CREATE TABLE nibrs.nibrs_activity_type (
   activity_type_id smallint NOT NULL,
