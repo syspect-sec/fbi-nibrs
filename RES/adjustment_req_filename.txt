@@ -11,10 +11,10 @@ NEW,nibrs_arrestee,ADD,ff_line_number,AFTER clearance_ind,NULL
 NEW,nibrs_arrestee,ADD,arrest_num,AFTER arrestee_seq_num,NULL
 OLD,nibrs_arrestee,ADD,data_year,FIRST,YEAR
 OLD,nibrs_bias_motivation,ADD,data_year,FIRST,YEAR
-OLD,nibrs_month,DELETE,data_year,AFTER month_num
+OLD,nibrs_month,DELETE,data_year,AFTER month_num,NULL
 OLD,nibrs_month,ADD,data_year,FIRST,YEAR
 OLD,nibrs_month,ADD,month_pub,LAST,NULL
-NEW,nibrs_month,DELETE,inc_data_year,AFTER month_num
+NEW,nibrs_month,DELETE,inc_data_year,AFTER month_num,NULL
 NEW,nibrs_month,ADD,prepared_date,AFTER report_date,NULL
 NEW,nibrs_month,ADD,ff_line_number,AFTER orig_format,NULL
 OLD,nibrs_incident,ADD,data_year,FIRST,NULL

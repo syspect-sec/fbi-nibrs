@@ -13,6 +13,7 @@ import traceback
 import time
 import os
 import sys
+import codecs
 from pprint import pprint
 import NIBRSLogger
 
@@ -25,39 +26,65 @@ def sanitize_csv_files(item, args):
     print("-- Starting to sanitize list of .csv files for item: " + item['zip_filename'] + "...")
 
     # Classify the data-type of the file
-    if item['year'] < 2015: item['data_type'] = "old"
-    else: item['data_type'] = "new"
+    if item['year'] < 2016: item['data_type'] = "OLD"
+    else: item['data_type'] = "NEW"
 
     # Remove any duplicate columns from the .csv files in the item
     remove_duplicate_columns(item)
-
-    # Fix the encoding for any tables that do not use UTF-8
-    item['csv_file_encoding'] = get_file_encoding(item)
+    # Get special encoding for any .csv files that do not use UTF-8
+    item['encoding'] = get_file_encoding(item)
 
     # Loop through all the identified .csv files available
     for csv_file in item['csv_files']:
 
-
         # Check which column must be added to the .csv file using the filename
-        adj_desc = get_adjustment_requirements(item, args)
+        adjustments = get_adjustment_requirements(csv_file, item, args)
         # If .csv file requires year column to be added
-        if adj_desc != None:
-            pass
-
+        if adjustments != None: apply_adjustments(csv_file, adjustments, item, args)
         # Add the file_code column to the end of .csv
-        add_file_code_column(item, args)
+        add_file_code_column(csv_file, item, args)
+
+    # Return success
+    return True
 
 # Return a list of adjustments to be made to file
-def get_adjustment_requirements(item, args):
+def get_adjustment_requirements(csv_file, item, args):
+
+    requirements = []
+    table_name = csv_file.lower().split(".")[0]
 
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-    # Open the file with requriements
+    logger.info("-- Checking adjustment requirements for: " + csv_file)
+    print("-- Checking adjustment requirements for: " + csv_file)
+
+    # Open the file with requriements and parse
     requirements_list = []
     with open(args['adjustment_req_filename'], "r") as infile:
         for line in infile:
             line = line.split(",")
             requirements_list.append(line)
+
+    # Search for requirement matching the csv_file
+    for req in requirements_list:
+        # If the requirement matches
+        if item['data_type'] == req[0] and table_name == req[1]:
+
+            logger.info("-- Adjustment requirement found for: " + csv_file)
+            print("-- Adjustment requirement found for: " + csv_file)
+
+            requirements.append({
+                "table_name" : req[1].strip(),
+                "action" : req[2].strip(),
+                "column_name" : req[3].strip(),
+                "location" : req[4].strip(),
+                "value" : req[5].strip()
+            })
+
+    # Return the array of requirements
+    pprint(requirements)
+    if len(requirements) ==  0: return None
+    else: return requirements
 
 # Remove any columns that are duplicated
 def remove_duplicate_columns(item):
@@ -71,7 +98,7 @@ def remove_duplicate_columns(item):
         print("-- Removing duplicates from .csv file: " + csv_file)
 
         # Open file and get headers, remove '"' and split on ","
-        with open(csv_file, "r") as infile:
+        with open(item['extract_directory'] + csv_file, "r") as infile:
             contents = infile.readlines()
             headers = contents[0].lower()
             headers = headers.replace('"',"").split(",")
@@ -84,30 +111,30 @@ def remove_duplicate_columns(item):
         else:
 
             duplicates = []
-            for item in headers:
-                if headers.count(item) != 1:
+            for header in headers:
+                if headers.count(header) != 1:
                     # Add item to list of duplicates
-                    duplicates.append(item)
+                    duplicates.append(header)
             # Remove duplciate occurances of duplicates found
             dup_set = set(duplicates)
             # Get the position(s) of the duplicate columns
             positions = []
-            for item in dup_set:
+            for header in dup_set:
                 item_found = False
                 col_num = 0
                 for col in headers:
                     # If column matches duplicate
-                    if item == col:
+                    if header == col:
                         # If not the first column that matched get position
                         if item_found:
-                            logger.info("-- Duplicate column " + item + " found at position " + str(col_num) +  " in .csv file: " + csv_file)
-                            print("-- Duplicate column " + item + " found at position " + str(col_num) +  " in .csv file: " + csv_file)
+                            logger.info("-- Duplicate column " + header + " found at position " + str(col_num) +  " in .csv file: " + csv_file)
+                            print("-- Duplicate column " + header + " found at position " + str(col_num) +  " in .csv file: " + csv_file)
                             positions.append(col_num)
                         else: item_found = True
                     col_num += 1
 
             # Re-write the file and remove the duplicate columns
-            with open(csv_file, "w") as outfile:
+            with open(item['extract_directory'] + csv_file, "w") as outfile:
 
                 logger.info("-- Re-writing in .csv file: " + csv_file)
                 print("-- Re-writing in .csv file: " + csv_file)
@@ -148,18 +175,20 @@ def get_file_encoding(item):
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
 
-    special_encoding = []
+    special_encoding = {}
 
     pg_load_filename = "postgres_load.sql"
     # Get the filepath of the PostgreSQL load file for the item
     if os.path.exists(item['extract_directory'] + pg_load_filename):
-        pg_load_filename =item['extract_directory'] + pg_load_filename
-        logger.info("-- PostgreSQL load file found: " + pg_load_filename)
-        print("-- PostgreSQL load file found: " + pg_load_filename)
-    elif os.path.exists(item['extract_directory'] + item['state_code'] + "/" +  pg_load_filename):
+        base_dl_dir = item['extract_directory']
         pg_load_filename = item['extract_directory'] + pg_load_filename
         logger.info("-- PostgreSQL load file found: " + pg_load_filename)
         print("-- PostgreSQL load file found: " + pg_load_filename)
+    elif os.path.exists(item['extract_directory'] + item['state_code'] + "/" +  pg_load_filename):
+        base_dl_dir = item['extract_directory'] + item['state_code'] + "/"
+        pg_load_filename = item['extract_directory'] + item['state_code'] + "/" +  pg_load_filename
+        logger.info("-- PostgreSQL load file found: " + pg_load_filename)
+        print("-- PostgreSQL load file found in subdirectory: " + pg_load_filename)
     else:
         logger.info("-- No PostgreSQL load file found: " + item['base_filename'])
         print("-- No PostgreSQL load file found for item: " + item['base_filename'])
@@ -179,17 +208,35 @@ def get_file_encoding(item):
                 table_name = line_lower.split()[1]
                 file_name = line.split()[3].replace("'", "")
                 # Append to list
-                special_encoding.append({ "file_name" : file_name, "table_name" : table_name, "encoding" : encoding})
+                special_encoding[file_name] = { "file_name" : base_dl_dir + file_name, "table_name" : table_name, "encoding" : encoding}
 
                 # Log the special enocding found
                 logger.info("-- Special encoding - " + encoding + " - found for file: " + file_name + " to table: " + table_name)
                 print("-- Special encoding - " + encoding + " - found for file: " + file_name + " to table: " + table_name)
 
-
+    #pprint(special_encoding)
     # Return the list of special encoded tables
     return special_encoding
 
+# Convert the encoding for a single CSV file
+def convert_csv_encoding(item):
 
+    # If using windows 1251 lagacy encoding (1 bit encoding)
+    if item['encoding'] == "windows-1251":
+        with codecs.open(item['file_name'], 'r', 'cp1251') as infile:
+            # Transform to a Unicode string
+            u = infile.read()
+        with codecs.open(item['file_name'], 'w', 'utf-8') as outfile:
+            # Output as UTF-8
+            outfile.write(u)
+
+# Add a column to the end of the CSV file for the file_code
+def add_file_code_column(csv_file, item, args):
+    pass
+
+# Apply any table requirement adjustments to the csv file
+def apply_adjustments(csv_file, adjustments, item, args):
+    pass
 
 # Check the functions
 if __name__ == "__main__":

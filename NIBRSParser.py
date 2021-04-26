@@ -38,7 +38,7 @@ def get_state_codes_from_file(args):
     return state_codes
 
 # Get a list of all .csv files in a directory and return list
-def get_csv_files_from_directory(item):
+def get_csv_files_from_directory(item, args):
 
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
@@ -47,7 +47,7 @@ def get_csv_files_from_directory(item):
 
     csv_files = []
     # Get list of files in extracted directory
-            all_files = os.listdir(item['extract_directory'])
+    all_files = os.listdir(item['extract_directory'])
     for found in all_files:
         if found.split(".")[-1] == "csv" or found.split(".")[-1] == "CSV":
             csv_files.append(found)
@@ -80,6 +80,7 @@ def get_link_list_from_log(args):
     print("-- " + str(len(link_list)) + " existing links log found in log file...")
     logger.info("-- " + str(len(link_list)) + " existing links log found in log file...")
 
+    # Return the list of links
     return link_list
 
 # Write new link list to log file
@@ -234,7 +235,7 @@ def process_all_links(args):
 
         # Get the state and year of each file
         link['state_code'] = link['base_filename'].split("-")[0]
-        link['year'] = link['base_filename'].split("-")[1]
+        link['year'] = int(link['base_filename'].split("-")[1])
 
         logger.info("-- Checking status of link: " + link['zip_filename'] + " - " + link['status'] + "...")
         print("-- Checking status of link: " + link['zip_filename'] + " - " + link['status'] + "...")
@@ -251,8 +252,10 @@ def process_all_links(args):
                     # Each directory also contains .SQL files
                     link['csv_files'] = get_csv_files_from_directory(link, args)
                     insert_success = NIBRSSanitizer.sanitize_csv_files(link, args)
-                    insert_success = insert_item_into_database(link, args)
-                    if insert_success: mark_link_as_processed(link, args)
+                    #insert_success = insert_item_into_database(link, args)
+                    if insert_success:
+                        #mark_link_as_processed(link, args)
+                        link_success = True
 
                 else:
                     logger.info("-- Failed to download and extract link: " + link['url'] + "...")
