@@ -14,6 +14,7 @@ import time
 import os
 import sys
 import codecs
+import csv
 from pprint import pprint
 import NIBRSLogger
 
@@ -36,7 +37,6 @@ def sanitize_csv_files(item, args):
 
     # Loop through all the identified .csv files available
     for csv_file in item['csv_files']:
-
         # Check which column must be added to the .csv file using the filename
         adjustments = get_adjustment_requirements(csv_file, item, args)
         # If .csv file requires year column to be added
@@ -75,6 +75,7 @@ def get_adjustment_requirements(csv_file, item, args):
             print("-- Adjustment requirement found for: " + csv_file)
 
             requirements.append({
+                "data_type" : req[0].strip(),
                 "table_name" : req[1].strip(),
                 "action" : req[2].strip(),
                 "column_name" : req[3].strip(),
@@ -83,7 +84,7 @@ def get_adjustment_requirements(csv_file, item, args):
             })
 
     # Return the array of requirements
-    pprint(requirements)
+    #pprint(requirements)
     if len(requirements) ==  0: return None
     else: return requirements
 
@@ -168,8 +169,6 @@ def remove_duplicate_columns(item):
             # Return success status
             return True
 
-
-
 # Get file encoding
 def get_file_encoding(item):
 
@@ -209,15 +208,20 @@ def get_file_encoding(item):
                 table_name = line_lower.split()[1]
                 file_name = line.split()[3].replace("'", "")
                 # Append to list
-                special_encoding[file_name] = { "file_name" : base_dl_dir + file_name, "table_name" : table_name, "encoding" : encoding}
+                special_encoding[file_name] = { "file_name" : base_dl_dir + file_name, "table_name" : table_name, "encoding" : encoding }
 
                 # Log the special enocding found
-                logger.info("-- Special encoding - " + encoding + " - found for file: " + file_name + " to table: " + table_name)
-                print("-- Special encoding - " + encoding + " - found for file: " + file_name + " to table: " + table_name)
+                logger.info("-- Special encoding - " + encoding + " - found for file: " + file_name)
+                print("-- Special encoding - " + encoding + " - found for file: " + file_name)
 
     #pprint(special_encoding)
     # Return the list of special encoded tables
-    return special_encoding
+    if len(special_encoding) == 0:
+        # Log the special enocding found
+        logger.info("-- No special encoding found for any files in: " + item['base_filename'])
+        print("-- No special encoding found for any files in: " + item['base_filename'])
+        return None
+    else: return special_encoding
 
 # Convert the encoding for a single CSV file
 def convert_csv_encoding(item):
@@ -270,7 +274,125 @@ def add_source_code_column(csv_file, item, args):
 
 # Apply any table requirement adjustments to the csv file
 def apply_adjustments(csv_file, adjustments, item, args):
-    pass
+
+    # Include logger
+    logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+    # Get the header from the file
+    logger.info("-- Applying adjustments to .csv file: " + csv_file)
+    print("-- Applying adjustments to .csv file: " + csv_file)
+
+    # Set the full filepath for the csv_file
+    csv_full_filepath = item['extract_directory'] + csv_file
+    # Get the table name that the requirements apply to
+    # which is the csv_filename stripped from extention
+    table_name = csv_file.lower().split(".")[0]
+
+    # Create list to hold applicable requirements
+    applicable_requirements = []
+
+    # Loop through all adjustments to apply
+    for requirement in adjustments:
+        if requirement['table_name'] == table_name and item['data_type'] == requirement['data_type']:
+            logger.info("-- Found applicable requirement to .csv file: " + csv_file)
+            #logger.info(pprint(requirement))
+            print("-- Found applicable requirement to .csv file: " + csv_file)
+            pprint(requirement)
+            applicable_requirements.append(requirement)
+
+    # Loop through the found applicable requirements
+    for requirement in applicable_requirements:
+
+        # Open file and get headers, remove '"' and split on ","
+        with open(csv_full_filepath, "r") as infile:
+            headers = infile.readline()
+
+        # Check if  column already added before
+        headers = headers.strip().split(",")
+        # Get a count of headers
+        col_cnt = len(headers)
+
+        # Open file and get full content and put to csv object
+        contents = []
+        with open(csv_full_filepath, "r") as infile:
+            csv_obj = csv.reader(infile, skipinitialspace=True)
+            for line in csv_obj:
+                contents.append(line)
+
+        # Set the value to be added
+        if requirement['value'] == "YEAR":
+            value = str(item['year'])
+        elif requirement['value'] == "NULL":
+            value = ""
+
+        # Get the index of column to be affeccted (added or deleted)
+        # If column to be added to last
+        if requirement['action'] == "ADD":
+            # If column to be added is last one
+            if requirement['location'] == "LAST":
+                index = col_cnt
+            # If column to be added to first
+            elif requirement['location'] == "FIRST":
+                index = 0
+            # If column to be added after another
+            elif "AFTER" in requirement['location']:
+                # Replace the word AFTER from location to get column name
+                location = requirement['location'].replace("AFTER", "").strip()
+                index = headers.index(location) + 1
+        elif requirement['action'] == "DELETE":
+            # If column to be removed is last one
+            if requirement['location'] == "LAST":
+                index = -1
+            # If column to be removed is first one
+            elif requirement['location'] == "FIRST":
+                index = 0
+            # If column to be added after another
+            elif "AFTER" in requirement['location']:
+                # Replace the word AFTER from location to get column name
+                location = requirement['location'].replace("AFTER", "").strip()
+                index = headers.index(location)
+
+        # If column to be added
+        if requirement['action'] == "ADD":
+            # Get the header from the file
+            logger.info("-- Adding column " + requirement['column_name'] + " to .csv file: " + csv_file)
+            print("-- Adding column " + requirement['column_name'] + " to .csv file: " + csv_file)
+
+            line_cnt = 0
+            with open(csv_full_filepath, "w") as outfile:
+                csv_writer = csv.writer(outfile)
+                for line in contents:
+                    #line = line.strip().split(",")
+                    # Write the header
+                    if line_cnt == 0:
+                        line_cnt += 1
+                        # Insert the column name to header
+                        line.insert(index, requirement['column_name'])
+                        #line = ",".join(line) + "\n"
+                    # Write each other line of file
+                    else:
+                        # Insert the value to the line
+                        line.insert(index, value)
+                        #line = ",".join(line) + "\n"
+                    # Write the modiedifed line to file
+                    csv_writer.writerow(line)
+                    #outfile.write(line)
+
+        # If column to be removed
+        elif requirement['action'] == "DELETE":
+            # Get the header from the file
+            logger.info("-- Deleting column " + requirement['column_name'] + " from .csv file: " + csv_file)
+            print("-- Deleting column " + requirement['column_name'] + " from .csv file: " + csv_file)
+
+            with open(csv_full_filepath, "w") as outfile:
+                csv_writer = csv.writer(outfile)
+                for line in contents:
+                    #line = line.strip().split(",")
+                    line.pop(index)
+                    # Write the modiedifed line to file
+                    csv_writer.writerow(line)
+                    #line = ",".join(line) + "\n"
+                    #outfile.write(line)
+
 
 # Check the functions
 if __name__ == "__main__":

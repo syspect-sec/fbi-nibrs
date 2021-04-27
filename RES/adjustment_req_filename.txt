@@ -17,10 +17,10 @@ OLD,nibrs_month,ADD,month_pub,LAST,NULL
 NEW,nibrs_month,DELETE,inc_data_year,AFTER month_num,NULL
 NEW,nibrs_month,ADD,prepared_date,AFTER report_date,NULL
 NEW,nibrs_month,ADD,ff_line_number,AFTER orig_format,NULL
-OLD,nibrs_incident,ADD,data_year,FIRST,NULL
-OLD,nibrs_incident,ADD,incident_number,FIRST,NULL
-OLD,nibrs_incident,ADD,ddocname,AFTER data_home,NULL
-OLD,nibrs_incident,ADD,ff_line_number,AFTER orig_format,NULL
+OLD,nibrs_incident,ADD,data_year,FIRST,YEAR
+NEW,nibrs_incident,ADD,incident_number,AFTER nibrs_month_id,NULL
+NEW,nibrs_incident,ADD,ddocname,AFTER data_home,NULL
+NEW,nibrs_incident,ADD,ff_line_number,AFTER orig_format,NULL
 OLD,nibrs_offender,ADD,data_year,FIRST,YEAR
 NEW,nibrs_offender,ADD,ff_line_number,AFTER ethnicity_id,NULL
 OLD,nibrs_offense,ADD,data_year,FIRST,YEAR

@@ -201,23 +201,21 @@ def download_and_extract_single_link(link, args):
 # Process item into database
 def insert_item_into_database(item, args):
 
-    return True
-    
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
     logger.info("-- Starting to store " + item['base_filename'] + " to database...")
     print("-- Starting to store " + item['base_filename'] + " to database...")
 
-    # Load the csv files into database
+    # Set flag to capture if a single file insert fails
+    # NOTE: should I track indivisual csv file insert success and ignore successfull ones?
+    all_success = False
+    # Load the .csv files into database
     for csv_file in item['csv_files']:
-        item['filename'] =  csv_file
-        item['full_filepath'] = item['extract_directory'] + csv_file
-        args['db_conn'].load_csv_bulk_data(item, args)
-
-    logger.info("-- Finished storing " + item['base_filename'] + " to database...")
-    print("-- Finished storing " + item['base_filename'] + " to database...")
-
-    return True
+        item['csv_filename'] =  csv_file
+        item['csv_full_filepath'] = item['extract_directory'] + csv_file
+        insert_success = args['db_conn'].load_csv_bulk_data(item, args)
+        if insert_success == False: all_success = False
+    return all_success
 
 # Process all links
 def process_all_links(args):
@@ -256,7 +254,7 @@ def process_all_links(args):
                     link = NIBRSSanitizer.sanitize_csv_files(link, args)
                     insert_success = insert_item_into_database(link, args)
                     if insert_success:
-                        #mark_link_as_processed(link, args)
+                        mark_link_as_processed(link, args)
                         link_success = True
 
                 else:
@@ -308,7 +306,6 @@ if __name__ == "__main__":
         "charset" : "utf8"
     }
 
-
     # Declare args
     args = {
         "cwd" : cwd,
@@ -334,7 +331,6 @@ if __name__ == "__main__":
             "cg-d4b776d0-d898-4153-90c8-8336f86bdfec",
             "cg-d3f0433b-a53e-4934-8b94-c678aa2cbaf3",
         ]
-
     }
 
     # Setup logger

@@ -34,7 +34,7 @@ class SQLProcess:
         self._cursor = None
 
         # Track whether data tables have been inserted or not
-        self.inserted_data_tables = []
+        self.inserted_code_tables = []
 
     # Establish connection to the database
     def connect(self):
@@ -177,24 +177,27 @@ class SQLProcess:
         start_time = time.time()
 
         logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-        print('[Staring to load csv files in bulk to ' + self.database_type + ']')
-        logger.info('Staring to load csv files in bulk to ' + self.database_type)
+        print('[Staring to load csv file: ' + item['csv_filename'] + ' in bulk to ' + self.database_type + ']')
+        logger.info('Staring to load csv file: ' + item['csv_filename'] + ' in bulk to ' + self.database_type)
 
         # Get a list of table names
         agency_table_names = self.get_agency_table_names(args)
-        main_table_names_file = self.get_main_table_names(args)
+        main_table_names = self.get_main_table_names(args)
         code_table_names = self.get_code_table_names(args)
 
         # Extract the table name and change to lower-case
-        item['table_name'] = item['filename'].split(".")[0]
+        item['table_name'] = item['csv_filename'].split(".")[0]
         item['table_name'] = item['table_name'].lower()
+        # Get the encoding scheme for the particular csv file
+        encoding = self.set_file_encoding(item['csv_filename'], item['encoding'])
+
 
         # Check that table name is in all table names
-        if item['table_name'] in main_table_names_file and item['table_name'] not in self.inserted_data_tables:
+        if (item['table_name'] in agency_table_names or item['table_name'] in main_table_names or item['table_name'] in code_table_names) and item['table_name'] not in self.inserted_code_tables:
 
             # Print message to stdout and log about which table is being inserted
-            print("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name']  + " - " + item['filename'])
-            logger.info("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name'] + " - " + item['filename'])
+            print("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name']  + " - " + item['csv_filename'])
+            logger.info("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name'] + " - " + item['csv_filename'])
 
             # Connect to database if not connected
             if self._conn == None:
@@ -210,26 +213,30 @@ class SQLProcess:
                 while bulk_insert_successful == False:
 
                     try:
+                        # Build the base SQL query
                         sql = "COPY nibrs." + item['table_name'] + " FROM STDIN DELIMITER ',' CSV HEADER"
+                        # Check for encoding
+                        if encoding is not None:
+                            sql = sql + " encoding '" + encoding + "'"
                         #self._cursor.copy_from(open(csv_file['csv_file_name'], "r"), csv_file['table_name'], sep = "|", null = "")
-                        self._cursor.copy_expert(sql, open(item['full_filepath'], "r"))
-                        # Return a successfull insertion flag
-                        bulk_insert_successful = True
+                        self._cursor.copy_expert(sql, open(item['csv_full_filepath'], "r"))
 
                         # If table was data table, add the table name to inserted data tables
-                        if item['table_name'] in code_table_names and item['table_name'] not in self.inserted_data_tables:
-                            self.inserted_data_tables.append(item['table_name'])
+                        if item['table_name'] in code_table_names and item['table_name'] not in self.inserted_code_tables:
+                            self.inserted_code_tables.append(item['table_name'])
                             # Print message to stdout and log
-                            print("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['filename'])
-                            logger.info("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['filename'])
+                            print("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
+                            logger.info("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
+
+                        return True
 
                     except Exception as e:
                         # Roll back the transaction
                         self._conn.rollback()
                         # Increment the failed counter
                         bulk_insert_failed_attempts += 1
-                        print("Database bulk load query failed for " + item['base_filename'] + "... " + item['filename'] + " into table: " + item['table_name'])
-                        logger.error("Database bulk load query failed for " + item['base_filename'] + "... " + item['filename'] + " into table: " + item['table_name'])
+                        print("Database bulk load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                        logger.error("Database bulk load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
                         print("Query string: " + sql)
                         logger.error("Query string: " + sql)
                         traceback.print_exc()
@@ -240,7 +247,7 @@ class SQLProcess:
                         traceback_array = traceback.format_exc().splitlines()
 
                         # Return a unsucessful flag
-                        if bulk_insert_failed_attempts > 20:
+                        if bulk_insert_failed_attempts > 0:
                             return False
 
             # If MySQL build query
@@ -257,7 +264,7 @@ class SQLProcess:
                         # TODO: consider "SET foreign_key_checks = 0" to ignore
                         # TODO: LOCAL is used to set duplicate key to warning instead of error
                         # TODO: IGNORE is also used to ignore rows that violate duplicate unique key constraints
-                        bulk_insert_sql = "LOAD DATA LOCAL INFILE '" + item['full_filepath'] + "' INTO TABLE " + item['table_name'] + " FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES"
+                        bulk_insert_sql = "LOAD DATA LOCAL INFILE '" + item['csv_full_filepath'] + "' INTO TABLE " + item['table_name'] + " FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES"
                         bulk_insert_sql = bulk_insert_sql.replace("\\", "/")
 
                         # Execute the query built above
@@ -284,8 +291,8 @@ class SQLProcess:
         # If the table is data table and already inserted
         else:
             # Print message to stdout and log about which table is being inserted
-            print("Data table already inserted into database: " + item['table_name'] + " - " + item['filename'])
-            logger.info("Data table already inserted into database: " + item['table_name'] + " - " + item['filename'])
+            print("Code table already inserted into database: " + item['table_name'] + " - " + item['csv_filename'])
+            logger.info("Code table already inserted into database: " + item['table_name'] + " - " + item['csv_filename'])
 
         # Return a successfull message from the database query insert.
         return True
@@ -489,11 +496,6 @@ class SQLProcess:
     # Get main table names
     def get_main_table_names(self, args):
 
-        # Include logger
-        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-        logger.info("-- Getting list of main table names from file...")
-        print("-- Getting list of main table names from file...")
-
         table_names = []
         with open(args['main_table_names_file'], "r") as infile:
             for line in infile:
@@ -504,11 +506,6 @@ class SQLProcess:
 
     # Get code table names
     def get_code_table_names(self, args):
-
-        # Include logger
-        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-        logger.info("-- Getting list of code table names from file...")
-        print("-- Getting list of code table names from file...")
 
         table_names = []
         with open(args['code_table_names_file'], "r") as infile:
@@ -521,14 +518,24 @@ class SQLProcess:
     # Get agency table names
     def get_agency_table_names(self, args):
 
-        # Include logger
-        logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-        logger.info("-- Getting list of agency table names from file...")
-        print("-- Getting list of agency table names from file...")
-
         table_names = []
         with open(args['agency_table_names_file'], "r") as infile:
             for line in infile:
                 table_names.append(line.replace('\n', ''))
         #print(code_table_names)
         return table_names
+
+    # Retrieves the encoding scheme if any from the list
+    def set_file_encoding(self, csv_filename, encoding_list):
+        # If no encoding return None
+        if encoding_list == None: return None
+        # If some items in encoding
+        else:
+            # Include logger
+            logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+            if csv_filename in encoding_list:
+                encoding = encoding_list[csv_filename][encoding]
+                logger.info("-- Found encoding scheme " + encoding + " for .csv file: " + csv_filename)
+                print("-- Found encoding scheme " + encoding + " for .csv file: " + csv_filename)
+                return encoding
+            else: return None
