@@ -97,7 +97,7 @@ def remove_duplicate_columns(item):
     for csv_file in item['csv_files']:
 
         logger.info("-- Removing duplicates from .csv file: " + csv_file)
-        print("-- Removing duplicates from .csv file: " + csv_file)
+        #print("-- Removing duplicates from .csv file: " + csv_file)
 
         # Open file and get headers, remove '"' and split on ","
         with open(item['extract_directory'] + csv_file, "r") as infile:
@@ -108,7 +108,7 @@ def remove_duplicate_columns(item):
         if len(headers) == len(set(headers)):
 
             logger.info("-- No duplicate columns found in .csv file: " + csv_file)
-            print("-- No duplicate columns found in .csv file: " + csv_file)
+            #print("-- No duplicate columns found in .csv file: " + csv_file)
         # If duplicates found in headers
         else:
 
@@ -252,7 +252,7 @@ def add_source_code_column(csv_file, item, args):
     for csv_file in item['csv_files']:
 
         logger.info("-- Adding source_code column to .csv file: " + csv_file)
-        print("-- Adding source_code column to .csv file: " + csv_file)
+        #print("-- Adding source_code column to .csv file: " + csv_file)
 
         # Open file and get headers, remove '"' and split on ","
         with open(item['extract_directory'] + csv_file, "r") as infile:
@@ -263,7 +263,7 @@ def add_source_code_column(csv_file, item, args):
         headers = headers.split(",")
         if "source_code" in headers:
             logger.info("-- source_code column already found in .csv file: " + csv_file)
-            print("-- source_code column already found in .csv file: " + csv_file)
+            #print("-- source_code column already found in .csv file: " + csv_file)
         else:
             # Open file and add column name to headers, add source_code column to each line
             with open(item['extract_directory'] + csv_file, "w") as outfile:
@@ -303,7 +303,7 @@ def apply_adjustments(csv_file, adjustments, item, args):
             logger.info("-- Found applicable requirement to .csv file: " + csv_file)
             #logger.info(pprint(requirement))
             print("-- Found applicable requirement to .csv file: " + csv_file)
-            pprint(requirement)
+            #pprint(requirement)
             applicable_requirements.append(requirement)
 
     # Loop through the found applicable requirements

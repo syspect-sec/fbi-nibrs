@@ -34,14 +34,15 @@ class SQLProcess:
         self._conn = None
         self._cursor = None
 
-        # Track whether data tables have been inserted or not
-        self.inserted_code_tables = []
-        self.inserted_agency_tables = []
         # Get a list of table names
         self.agency_table_names = self.get_agency_table_names(args)
         self.main_table_names = self.get_main_table_names(args)
         self.code_table_names = self.get_code_table_names(args)
         self.primary_key_list = self.get_primary_key_list(args)
+
+        # Track whether data tables have been inserted or not
+        self.inserted_code_tables = self.get_inserted_code_tables(args)
+        self.inserted_agency_tables = self.get_inserted_agency_tables(args)
 
     # Establish connection to the database
     def connect(self):
@@ -237,7 +238,7 @@ class SQLProcess:
                         print("** SUCCESS ** Database bulk load query succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
                         logger.info("** SUCCESS ** Database bulk load query succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
 
-                        # If table was data table, add the table name to inserted data tables
+                        # If table was code table, add the table name to inserted code tables
                         # NOTE: This needs to be fixed because different states have different agencies,
                         # although some overlap from year file to year file
                         if item['table_name'] in self.code_table_names and item['table_name'] not in self.inserted_code_tables:
@@ -245,6 +246,12 @@ class SQLProcess:
                             # Print message to stdout and log
                             print("** Code table for " + item['base_filename'] + " inserted to code tables list: "  + item['table_name']  + " - " + item['csv_filename'])
                             logger.info("** Code table for " + item['base_filename'] + " inserted to code tables list: "  + item['table_name'] + " - " + item['csv_filename'])
+                        # If table was agency table, add the table name to inserted agency tables
+                        elif item['table_name'] in self.agency_table_names and item['table_name'] not in self.inserted_agency_tables:
+                            self.inserted_agency_tables.append(item['table_name'])
+                            # Print message to stdout and log
+                            print("** Agency table for " + item['base_filename'] + " inserted to agency tables list: "  + item['table_name']  + " - " + item['csv_filename'])
+                            logger.info("** Agency table for " + item['base_filename'] + " inserted to agency tables list: "  + item['table_name'] + " - " + item['csv_filename'])
 
                         # Return success
                         return True
@@ -272,6 +279,7 @@ class SQLProcess:
 
             # If there was a reason not to insert the file to the database
             else:
+
                 # If the code table has been inserted already
                 # look for unique records only and attempt insert
                 if item['table_name'] in self.inserted_code_tables or item['table_name'] in self.inserted_agency_tables:
@@ -280,73 +288,99 @@ class SQLProcess:
                     print("** Code or agency table already inserted into database: " + item['table_name'] + " - " + item['csv_filename'])
                     logger.info("** Code or agency table already inserted into database: " + item['table_name'] + " - " + item['csv_filename'])
 
-                    try:
-                        # Insert the items at at a time
-                        print("** Checking .csv file for new unique values: " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
-                        logger.error("** Checking .csv file for new unique values: " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
 
-                        # Load the csv_file into list of dictionary
-                        with open(item['csv_filename'], "r") as infile:
-                            csv_obj = [{k: int(v) for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
+                    # Connect to database if not connected
+                    if self._conn == None:
+                        self.connect()
 
-                        new_records = []
-                        for line in csv_obj:
-                            # Check the association of the primary key column for that table
-                            pk = get_primary_key_column_for_table(item['table_name'])
-                            # Check if the value for the primary key value is inseted into table already
-                            record_exists = check_primary_value_exists(line, pk, item['table_name'], args)
-                            # If record not in database, add to list to be inserted
-                            if not record_exists:
-                                new_records.append(csv_ojb)
+                    # Set flag to determine if the query was successful
+                    bulk_insert_successful = False
+                    bulk_insert_failed_attempts = 0
+                    allowed_insert_attempts = 1
 
-                        # Write the new unique values into the .csv file and bulk .csv insert
-                        if len(new_records) != 0:
+                    # Loop until successfull insertion
+                    while bulk_insert_successful == False:
 
-                            # Re-create the .csv file with only unique records
-                            write_new_unique_to_csv(new_records, item, args)
+                        try:
+                            # Insert the items at at a time
+                            print("** Checking .csv file for new unique values: " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                            logger.error("** Checking .csv file for new unique values: " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
 
-                            # Turn off the foreign key checks
-                            sql = "ALTER TABLE " + item['table_name'] + " DISABLE TRIGGER ALL"
-                            self._cursor.execute(sql)
+                            # Load the csv_file into list of dictionary
+                            with open(item['extract_directory'] + item['csv_filename'], "r") as infile:
+                                csv_obj = [{k.lower(): v for k, v in row.items()} for row in csv.DictReader(infile, skipinitialspace=True)]
 
-                            # Build the base SQL query
-                            sql = "COPY nibrs." + item['table_name'] + " FROM STDIN DELIMITER ',' CSV HEADER"
-                            # Check for encoding
-                            # TODO: Due to encoding conversion earlier in sanitizer, this check
-                            # Should not be needed anymore
-                            if encoding is not None:
-                                sql = sql + " encoding '" + encoding + "'"
-                            #self._cursor.copy_from(open(csv_file['csv_file_name'], "r"), csv_file['table_name'], sep = "|", null = "")
-                            self._cursor.copy_expert(sql, open(item['csv_full_filepath'], "r"))
+                            new_records = []
+                            for line in csv_obj:
+                                # Check the association of the primary key column for that table
+                                pk = self.get_primary_key_column_for_table(item['table_name'])
+                                # Check if the value for the primary key value is inseted into table already
+                                record_exists = self.check_primary_key_value_exists(line, pk, item['table_name'], args)
+                                # If record not in database, add to list to be inserted
+                                if not record_exists:
+                                    new_records.append(line)
 
-                            # Turn on the foreign key checks
-                            sql = "ALTER TABLE " + item['table_name'] + " ENABLE TRIGGER ALL"
-                            self._cursor.execute(sql)
+                            # Write the new unique values into the .csv file and bulk .csv insert
+                            if len(new_records) != 0:
 
-                            # Print message to stdout and log
-                            print("** SUCCESS ** Database bulk load query of only unique values succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
-                            logger.info("** SUCCESS ** Database bulk load query of only unique values succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
+                                # Print message to stdout and log
+                                print("** UNIQUE VALUES FOUND ** found for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
+                                logger.info("** UNIQUE VALUES FOUND ** found for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
 
-                    except Exception as e:
-                        # Roll back the transaction
-                        self._conn.rollback()
+                                # Re-create the .csv file with only unique records
+                                self.write_new_unique_to_csv(new_records, item, args)
 
-                        # Increment the failed counter
-                        bulk_insert_failed_attempts += 1
-                        print("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
-                        logger.error("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
-                        print("** Query string: " + sql)
-                        logger.error("** Query string: " + sql)
-                        traceback.print_exc()
-                        exc_type, exc_obj, exc_tb = sys.exc_info()
-                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                        logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
-                        # If the cause was a dupllicate entry error, then try to clean the file
-                        traceback_array = traceback.format_exc().splitlines()
+                                # Turn off the foreign key checks
+                                sql = "ALTER TABLE " + item['table_name'] + " DISABLE TRIGGER ALL"
+                                self._cursor.execute(sql)
 
-                        # Return a unsucessful flag
-                        if bulk_insert_failed_attempts > allowed_insert_attempts:
-                            return False
+                                # Build the base SQL query
+                                sql = "COPY nibrs." + item['table_name'] + " FROM STDIN DELIMITER ',' CSV HEADER"
+                                # Check for encoding
+                                # TODO: Due to encoding conversion earlier in sanitizer, this check
+                                # Should not be needed anymore
+                                if encoding is not None:
+                                    sql = sql + " encoding '" + encoding + "'"
+                                #self._cursor.copy_from(open(csv_file['csv_file_name'], "r"), csv_file['table_name'], sep = "|", null = "")
+                                self._cursor.copy_expert(sql, open(item['csv_full_filepath'], "r"))
+
+                                # Turn on the foreign key checks
+                                sql = "ALTER TABLE " + item['table_name'] + " ENABLE TRIGGER ALL"
+                                self._cursor.execute(sql)
+
+                                # Print message to stdout and log
+                                print("** SUCCESS ** Database bulk load query of only unique values succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
+                                logger.info("** SUCCESS ** Database bulk load query of only unique values succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
+
+                            else:
+                                # Print message to stdout and log
+                                print("** NO UNIQUE VALUES ** found for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
+                                logger.info("** NO UNIQUE VALUES ** found for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
+
+
+                            # Return success
+                            return True
+
+                        except Exception as e:
+                            # Roll back the transaction
+                            self._conn.rollback()
+
+                            # Increment the failed counter
+                            bulk_insert_failed_attempts += 1
+                            print("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                            logger.error("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                            print("** Query string: " + sql)
+                            logger.error("** Query string: " + sql)
+                            traceback.print_exc()
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
+                            # If the cause was a dupllicate entry error, then try to clean the file
+                            traceback_array = traceback.format_exc().splitlines()
+
+                            # Return a unsucessful flag
+                            if bulk_insert_failed_attempts > allowed_insert_attempts:
+                                return False
 
                 # If the table name is unknown
                 elif item['table_name'] not in self.agency_table_names or item['table_name'] not in self.main_table_names or item['table_name'] not in self.code_table_names:
@@ -563,6 +597,41 @@ class SQLProcess:
         #print(code_table_names)
         return table_names
 
+    # Checks the .csv logs file for code tables already inserted
+    def get_inserted_code_tables(self, args):
+
+        #print(self.code_table_names)
+        inserted_code_tables = []
+        with open(args['csv_log_file'], "r") as infile:
+            contents = infile.readlines()
+        for line in contents:
+            line = line.strip().split(",")
+            line[0] = line[0].split("/")[-1]
+            line[0] = line[0].split(".")[0]
+            line[0] = line[0].lower()
+            #print(line)
+            if line[0] in self.code_table_names and line[1] == "Processed" and line[0] not in inserted_code_tables:
+                inserted_code_tables.append(line[0])
+        #pprint(inserted_code_tables)
+        return inserted_code_tables
+
+    # Checks the .csv logs file for code tables already inserted
+    def get_inserted_agency_tables(self, args):
+
+        #print(self.agency_table_names)
+        inserted_agency_tables = []
+        with open(args['csv_log_file'], "r") as infile:
+            contents = infile.readlines()
+        for line in contents:
+            line = line.strip().split(",")
+            line[0] = line[0].split("/")[-1]
+            line[0] = line[0].split(".")[0]
+            line[0] = line[0].lower()
+            #print(line)
+            if line[0] in self.agency_table_names and line[1] == "Processed" and line[0] not in inserted_agency_tables:
+                inserted_agency_tables.append(line[0])
+        ##pprint(inserted_agency_tables)
+        return inserted_agency_tables
 
     # Get agency table names
     def get_agency_table_names(self, args):
@@ -596,7 +665,7 @@ class SQLProcess:
             for line in infile:
                 line = line.strip().split(",")
                 table_name = line.pop(0)
-                primary_key_list[table_name] =
+                primary_key_list[table_name] = line
         #print(primary_key_list)
         return primary_key_list
 
@@ -612,19 +681,27 @@ class SQLProcess:
         else: return None
 
     # Check if a value exists for the row
-    def check_primary_value_exists(self, line, pk, table_name, args):
-        # Prepare the query
-        sql = "SELECT " + pk + " FROM " + table_name + " WHERE " + pk + " = '" + line[pk] + "'"
+    def check_primary_key_value_exists(self, line, pk, table_name, args):
+        # Check if pk is one or more than one column
+        if "-" in pk:
+            pk = pk.split("-")
+            sql = "SELECT COUNT(*) FROM " + table_name + " WHERE " + pk[0] + " = '" + line[pk[0]] + "' AND " + pk[1] + " = '" + line[pk[1]] + "'"
+        else:
+            # Prepare the query
+            sql = "SELECT COUNT(*) FROM " + table_name + " WHERE " + pk + " = '" + line[pk] + "'"
+        #print(sql)
         # Execute the query
         self._cursor.execute(sql)
         # Check the count is true or false.
         result = self._cursor.fetchone()
         # Return the exists status
+        #print(result)
         if result[0] == 0: return False
         else: return True
 
     # Write the new unique records back to original csv file
     def write_new_unique_to_csv(self, new_records, item, args):
+        #print(new_records)
         # Get the keys for header
         keys = new_records[0].keys()
         # Write list items to .csv file

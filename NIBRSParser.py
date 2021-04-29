@@ -351,8 +351,8 @@ def process_all_links(links_list, args):
                 logger.info("-- Failed to download and extract link: " + link['url'] + "...")
                 print("-- Failed to download and extract link: " + link['url'] + "...")
         else:
-            logger.info("-- Skipping previously procesed link: " + link['url'] + "...")
-            print("-- Skipping previously procesed link: " + link['url'] + "...")
+            logger.info("-- Skipping previously processed link: " + link['url'] + "...")
+            print("-- Skipping previously processed link: " + link['url'] + "...")
 
 #
 # Main Function
@@ -383,7 +383,7 @@ if __name__ == "__main__":
     code_table_names_file = cwd + "RES/code_table_names.txt"
     adjustment_req_filename = cwd + "RES/adjustment_requirements.txt"
     table_order_filename = cwd + "RES/table_order.txt"
-    primary_key_list_filename = cwd + "RES/primary_key_list_filename.txt"
+    primary_key_list_filename = cwd + "RES/primary_key_list.txt"
 
     # Database args
     database_args = {
@@ -415,7 +415,7 @@ if __name__ == "__main__":
         "code_table_names_file" : code_table_names_file,
         "adjustment_req_filename" : adjustment_req_filename,
         "table_order_filename" : table_order_filename,
-        "primary_key_list" : primary_key_list,
+        "primary_key_list_filename" : primary_key_list_filename,
         "start_year" : 1991,
         "end_year" : 2020,
         "database_args" : database_args,

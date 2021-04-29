@@ -291,7 +291,7 @@ CREATE TABLE nibrs.nibrs_criminal_act (
   source_code character varying(10)
 );
 
-ALTER TABLE nibrs.nibrs_cleared_except OWNER TO nibrs;
+ALTER TABLE nibrs.nibrs_criminal_act OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_criminal_act_type (
   criminal_act_id smallint NOT NULL,

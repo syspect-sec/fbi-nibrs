@@ -37,6 +37,8 @@ nibrs_location_type,location_id
 nibrs_assignment_type,assignment_type_id
 nibrs_weapon,nibrs_weapon_id
 ref_race,race_id
-ref_statestate_id
-agenciesagency_id
+ref_state,state_id
 nibrs_justifiable_force,justifiable_force_id
+agencies,agency_id
+agency_participation,agency_id,source_code
+cde_agencies,agency_id
