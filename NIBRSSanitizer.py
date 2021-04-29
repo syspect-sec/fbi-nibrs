@@ -175,17 +175,17 @@ def get_file_encoding(item):
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
 
-    special_encoding = {}
+    special_encoding = []
     pg_load_filename = "postgres_load.sql"
 
     # Get the filepath of the PostgreSQL load file for the item
     if os.path.exists(item['extract_directory'] + pg_load_filename):
-        base_dl_dir = item['extract_directory']
+        base_dl_dir = ''
         pg_load_filename = item['extract_directory'] + pg_load_filename
         logger.info("-- PostgreSQL load file found: " + pg_load_filename)
         print("-- PostgreSQL load file found: " + pg_load_filename)
     elif os.path.exists(item['extract_directory'] + item['state_code'] + "/" +  pg_load_filename):
-        base_dl_dir = item['extract_directory'] + item['state_code'] + "/"
+        base_dl_dir = item['state_code'] + "/"
         pg_load_filename = item['extract_directory'] + item['state_code'] + "/" +  pg_load_filename
         logger.info("-- PostgreSQL load file found: " + pg_load_filename)
         print("-- PostgreSQL load file found in subdirectory: " + pg_load_filename)
@@ -208,30 +208,37 @@ def get_file_encoding(item):
                 table_name = line_lower.split()[1]
                 file_name = line.split()[3].replace("'", "")
                 # Append to list
-                special_encoding[file_name] = { "file_name" : base_dl_dir + file_name, "table_name" : table_name, "encoding" : encoding }
+                special_encoding.append({ "file_name" : base_dl_dir + file_name, "table_name" : table_name, "encoding" : encoding })
 
                 # Log the special enocding found
                 logger.info("-- Special encoding - " + encoding + " - found for file: " + file_name)
                 print("-- Special encoding - " + encoding + " - found for file: " + file_name)
 
     #pprint(special_encoding)
-    # Return the list of special encoded tables
+    # If no special enocding found return None
     if len(special_encoding) == 0:
         # Log the special enocding found
         logger.info("-- No special encoding found for any files in: " + item['base_filename'])
         print("-- No special encoding found for any files in: " + item['base_filename'])
         return None
-    else: return special_encoding
+    # If special enocding found, then convert files to UTF-8
+    else:
+        for csv_file in special_encoding:
+            # Convert the csv file
+            convert_csv_encoding(csv_file['file_name'], csv_file['encoding'], item)
+        return special_encoding
 
 # Convert the encoding for a single CSV file
-def convert_csv_encoding(item):
+def convert_csv_encoding(csv_file, encoding, item):
 
-    # If using windows 1251 lagacy encoding (1 bit encoding)
-    if item['encoding'] == "windows-1251":
-        with codecs.open(item['file_name'], 'r', 'cp1251') as infile:
+    # Get the full path of csv_file
+    csv_full_filepath = item['extract_directory'] + csv_file
+    # If using windows 1251 legacy encoding (1 bit encoding)
+    if encoding == "windows-1251":
+        with codecs.open(csv_full_filepath, 'r', 'cp1251') as infile:
             # Transform to a Unicode string
             u = infile.read()
-        with codecs.open(item['file_name'], 'w', 'utf-8') as outfile:
+        with codecs.open(csv_full_filepath, 'w', 'utf-8') as outfile:
             # Output as UTF-8
             outfile.write(u)
 
@@ -306,8 +313,8 @@ def apply_adjustments(csv_file, adjustments, item, args):
         with open(csv_full_filepath, "r") as infile:
             headers = infile.readline()
 
-        # Check if  column already added before
-        headers = headers.strip().split(",")
+        # Get a list of headers in the file
+        headers = headers.lower().replace('"',"").strip().split(",")
         # Get a count of headers
         col_cnt = len(headers)
 
@@ -349,7 +356,7 @@ def apply_adjustments(csv_file, adjustments, item, args):
             elif "AFTER" in requirement['location']:
                 # Replace the word AFTER from location to get column name
                 location = requirement['location'].replace("AFTER", "").strip()
-                index = headers.index(location)
+                index = headers.index(location) + 1
 
         # If column to be added
         if requirement['action'] == "ADD":

@@ -37,6 +37,32 @@ def get_state_codes_from_file(args):
     #print(state_codes)
     return state_codes
 
+# Get agency table names
+def get_table_order_list(args):
+    table_order = []
+    with open(args['table_order_filename'], "r") as infile:
+        for line in infile:
+            table_order.append(line.replace('\n', ''))
+    return table_order
+
+# Change the order of the csv_files in the list to
+# meet the foreign key requirements
+def reorder_csv_files_for_FK(csv_files, args):
+    csv_files_ordered = []
+    # Get the list that contains correct order
+    table_order_list = get_table_order_list(args)
+    for file in table_order_list:
+        for csv_file in csv_files:
+            # Handle files that are in sub directory
+            if "/" in csv_file:
+                tmp_csv_file = csv_file.split("/")
+                if tmp_csv_file.lower() == file: csv_files_ordered.append(csv_file)
+            # Handle files in main directory
+            else:
+                if csv_file.lower() == file: csv_files_ordered.append(csv_file)
+    # Return re-ordered list
+    return csv_files_ordered
+
 # Get a list of all .csv files in a directory and return list
 def get_csv_files_from_directory(item, args):
 
@@ -98,7 +124,7 @@ def write_link_list_to_log(link_list, args):
     print("-- Finished writing list of bulk data urls to log file...")
 
 # Mark the link url as processed in log file
-def mark_link_as_processed(link, args):
+def check_entire_link_is_processed(link, args):
     pass
 
 # Get a list of all links
@@ -198,6 +224,66 @@ def download_and_extract_single_link(link, args):
         os.remove(link['dl_filename'])
         return False
 
+# Check if the csv_file is in the csv log already
+# if not log it, else return if it has been processed already
+def check_csv_file_inserted_already(csv_file, item, args):
+
+    # Check if the csv_file in status
+    csv_full_filepath = item['extract_directory'] + csv_file
+
+    # Include logger
+    logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+    logger.info("-- Checking .csv file insertion status " + csv_full_filepath)
+    print("-- Checking .csv file insertion status " + csv_full_filepath)
+
+    # Read the file in to status list
+    csv_status = {}
+    with open(args['csv_log_file'], "r") as infile:
+        contents = infile.readlines()
+    for line in contents:
+        # Split the line into filepath and status
+        line = line.split(",")
+        csv_status[line[0]] = line[1].strip()
+    if csv_full_filepath in csv_status:
+        # Re-write the original file unchanged
+        with open(args['csv_log_file'], "w") as outfile:
+            for line in contents:
+                outfile.write(line)
+        if csv_status[csv_full_filepath] == "Processed":
+            logger.info("-- PROCESSED status found for .csv file: " + csv_full_filepath)
+            print("-- PROCESSED status found for .csv file: " + csv_full_filepath)
+            return True
+        else:
+            logger.info("-- UNPROCESSED status found for .csv file: " + csv_full_filepath)
+            print("-- UNPROCESSED status found for .csv file: " + csv_full_filepath)
+            return False
+    # Append the new csv file to log file and return not inserted status
+    else:
+        logger.info("-- NOT FOUND - Adding .csv file: " + csv_full_filepath + " to log file...")
+        print("-- NOT FOUND - Adding .csv file: " + csv_full_filepath + " to log file...")
+        # Re-write the original file unchanged
+        with open(args['csv_log_file'], "a") as outfile:
+            outfile.write(csv_full_filepath + ",Unprocessed\n")
+        return False
+
+# Alter the log file with csv_file success processed
+def log_csv_file_success(csv_file, item, args):
+
+    # Include logger
+    logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+    logger.info("** Starting to store " + item['base_filename'] + " - " + csv_file +  " to database...")
+    print("** Starting to store " + item['base_filename'] + " -" + csv_file + " to database...")
+
+    # Read in log file contents
+    with open(args['csv_log_file'], "r") as infile:
+        contents = infile.readlines()
+    # Output and change csv_file to Processed
+    with open(args['csv_log_file'], "w") as outfile:
+        for line in contents:
+            if item['extract_directory'] + csv_file in line:
+                line = line.replace("Unprocessed", "Processed")
+            outfile.write(line)
+
 # Process item into database
 def insert_item_into_database(item, args):
 
@@ -206,27 +292,32 @@ def insert_item_into_database(item, args):
     logger.info("-- Starting to store " + item['base_filename'] + " to database...")
     print("-- Starting to store " + item['base_filename'] + " to database...")
 
+    # Reorder the csv files to match the order required by Foreign Keys
+    #item['csv_files'] = reorder_csv_files_for_FK(item['csv_files'], args)
+
     # Set flag to capture if a single file insert fails
     # NOTE: should I track indivisual csv file insert success and ignore successfull ones?
-    all_success = False
     # Load the .csv files into database
     for csv_file in item['csv_files']:
-        item['csv_filename'] =  csv_file
-        item['csv_full_filepath'] = item['extract_directory'] + csv_file
-        insert_success = args['db_conn'].load_csv_bulk_data(item, args)
-        if insert_success == False: all_success = False
-    return all_success
+        # Check if the file has been inserted already
+        inserted = check_csv_file_inserted_already(csv_file, item, args)
+        if not inserted:
+            item['csv_filename'] =  csv_file
+            item['csv_full_filepath'] = item['extract_directory'] + csv_file
+            insert_success = args['db_conn'].load_csv_bulk_data(item, args)
+            # If the csv file was inserted sucessfully log the file success
+            if insert_success: log_csv_file_success(csv_file, item, args)
 
 # Process all links
-def process_all_links(args):
+def process_all_links(links_list, args):
 
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
     logger.info("-- Starting to process list of bulk data urls...")
     print("-- Starting to process list of bulk data urls...")
 
-    for link in args['link_list']:
-        link_success = False
+    for link in link_list:
+
         # Get a filename and destination extracted data directory for link
         link['zip_filename'] = link['url'].split("/")[-1]
         link['dl_filename'] = args['dl_dir'] + link['zip_filename']
@@ -242,24 +333,23 @@ def process_all_links(args):
 
         # Check if file donwloaded already
         if link['status'] == "Unprocessed":
+
             logger.info("-- Starting to process link: " + link['url'] + "...")
             print("-- Starting to process link: " + link['url'] + "...")
-            while not link_success:
-                extract_success = download_and_extract_single_link(link, args)
-                if extract_success:
-                    insert_success = False
-                    # Get list of .csv files in the unzipped directory
-                    # Each directory also contains .SQL files
-                    link['csv_files'] = get_csv_files_from_directory(link, args)
-                    link = NIBRSSanitizer.sanitize_csv_files(link, args)
-                    insert_success = insert_item_into_database(link, args)
-                    if insert_success:
-                        mark_link_as_processed(link, args)
-                        link_success = True
-
-                else:
-                    logger.info("-- Failed to download and extract link: " + link['url'] + "...")
-                    print("-- Failed to download and extract link: " + link['url'] + "...")
+            extract_success = download_and_extract_single_link(link, args)
+            if extract_success:
+                # Get list of .csv files in the unzipped directory
+                # Each directory also contains .SQL files
+                link['csv_files'] = get_csv_files_from_directory(link, args)
+                # Normalize all .csv files for database insertion
+                link = NIBRSSanitizer.sanitize_csv_files(link, args)
+                # Insert all .csv to database
+                insert_item_into_database(link, args)
+                # If database insertion success fix csv file log
+                check_entire_link_is_processed(link, args)
+            else:
+                logger.info("-- Failed to download and extract link: " + link['url'] + "...")
+                print("-- Failed to download and extract link: " + link['url'] + "...")
         else:
             logger.info("-- Skipping previously procesed link: " + link['url'] + "...")
             print("-- Skipping previously procesed link: " + link['url'] + "...")
@@ -272,7 +362,8 @@ if __name__ == "__main__":
     # Declare vars
     cwd = os.getcwd() + "/"
     app_log_file = cwd + "LOG/NIBRS_app.log"
-    link_log_file = cwd + "LOG/NIBRS.log"
+    link_log_file = cwd + "LOG/NIBRS_links.log"
+    csv_log_file = cwd + "LOG/NIBRS_csv.log"
     # Log levels
     log_level = 3 # Log levels 1 = error, 2 = warning, 3 = info
     stdout_level = 1 # Stdout levels 1 = verbose, 0 = non-verbose
@@ -290,7 +381,9 @@ if __name__ == "__main__":
     agency_table_names_file = cwd + "RES/agency_table_names.txt"
     main_table_names_file = cwd + "RES/main_table_names.txt"
     code_table_names_file = cwd + "RES/code_table_names.txt"
-    adjustment_req_filename = cwd + "RES/adjustment_req_filename.txt"
+    adjustment_req_filename = cwd + "RES/adjustment_requirements.txt"
+    table_order_filename = cwd + "RES/table_order.txt"
+    primary_key_list_filename = cwd + "RES/primary_key_list_filename.txt"
 
     # Database args
     database_args = {
@@ -311,6 +404,7 @@ if __name__ == "__main__":
         "cwd" : cwd,
         "app_log_file" : app_log_file,
         "link_log_file" : link_log_file,
+        "csv_log_file" : csv_log_file,
         "log_level" : log_level,
         "stdout_level" : stdout_level,
         "default_threads" : default_threads,
@@ -320,6 +414,8 @@ if __name__ == "__main__":
         "main_table_names_file" : main_table_names_file,
         "code_table_names_file" : code_table_names_file,
         "adjustment_req_filename" : adjustment_req_filename,
+        "table_order_filename" : table_order_filename,
+        "primary_key_list" : primary_key_list,
         "start_year" : 1991,
         "end_year" : 2020,
         "database_args" : database_args,
@@ -339,11 +435,11 @@ if __name__ == "__main__":
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
 
     # Create a database connection
-    db_conn = SQLProcessor.SQLProcess(database_args)
+    db_conn = SQLProcessor.SQLProcess(database_args, args)
     db_conn.connect()
     args['db_conn'] = db_conn
 
     # Build list of links
-    args['link_list'] = get_link_list(args)
+    link_list = get_link_list(args)
     # Download and process each link into database
-    process_all_links(args)
+    process_all_links(link_list, args)

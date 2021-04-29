@@ -1,12 +1,16 @@
 DONE - Newer years have a sub-folder so need to check if .csv files are in subfolders
-- some older year .csv files do not have the year included as column and so error on number of columns
-  - Need to create function to add that to the
-- Can count columns for each year of files and check when year is not added
+DONE - some older year .csv files do not have the year included as column and so error on number of columns
+DONE - Can count columns for each year of files and check when year is not added
 DONE - Some files have double quote encapsulated some don't , could re-write all (????)
 
-- Should create a column for every table for filename and use STATE-YEAR-filename.csv
--
+DONE - Should create a column for every table for filename and use STATE-YEAR-filename.csv
 
+DONE - Set the order of table insertion to fit the key restraint requirements and add the FK back into setup files
+DONE - Create log file that includes every csv file fullpath and whether processed
+
+-- Check databases for all agency items and insert one at at time if not already inside
+-- Check database for items in all code files and insert one at a time if not inside... or build script to remove and try bulk again
+-- Create check for each .zip link to change to processed... or get rid of zip link file
 
 *** Table differences between AL-1991 and AL-2019 ***
 

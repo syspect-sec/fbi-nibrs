@@ -12,13 +12,14 @@ import traceback
 import time
 import sys
 import os
+import csv
 from pprint import pprint
 import NIBRSLogger
 
 class SQLProcess:
 
     # Initialize connection to database using arguments
-    def __init__(self, db_args):
+    def __init__(self, db_args, args):
 
         # Pass the database type to class variable
         self.database_type = db_args['database_type']
@@ -35,6 +36,12 @@ class SQLProcess:
 
         # Track whether data tables have been inserted or not
         self.inserted_code_tables = []
+        self.inserted_agency_tables = []
+        # Get a list of table names
+        self.agency_table_names = self.get_agency_table_names(args)
+        self.main_table_names = self.get_main_table_names(args)
+        self.code_table_names = self.get_code_table_names(args)
+        self.primary_key_list = self.get_primary_key_list(args)
 
     # Establish connection to the database
     def connect(self):
@@ -177,13 +184,6 @@ class SQLProcess:
         start_time = time.time()
 
         logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
-        print('[Staring to load csv file: ' + item['csv_filename'] + ' in bulk to ' + self.database_type + ']')
-        logger.info('Staring to load csv file: ' + item['csv_filename'] + ' in bulk to ' + self.database_type)
-
-        # Get a list of table names
-        agency_table_names = self.get_agency_table_names(args)
-        main_table_names = self.get_main_table_names(args)
-        code_table_names = self.get_code_table_names(args)
 
         # Extract the table name and change to lower-case
         item['table_name'] = item['csv_filename'].split(".")[0]
@@ -192,53 +192,73 @@ class SQLProcess:
         encoding = self.set_file_encoding(item['csv_filename'], item['encoding'])
 
 
-        # Check that table name is in all table names
-        if (item['table_name'] in agency_table_names or item['table_name'] in main_table_names or item['table_name'] in code_table_names) and item['table_name'] not in self.inserted_code_tables:
+        # If postgresql build query
+        if self.database_type == "postgresql":
 
-            # Print message to stdout and log about which table is being inserted
-            print("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name']  + " - " + item['csv_filename'])
-            logger.info("Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name'] + " - " + item['csv_filename'])
+            # Check that table name is in all table names
+            if (item['table_name'] in self.agency_table_names or item['table_name'] in self.main_table_names or item['table_name'] in self.code_table_names) and (item['table_name'] not in self.inserted_code_tables and item['table_name'] not in self.inserted_agency_tables):
 
-            # Connect to database if not connected
-            if self._conn == None:
-                self.connect()
+                # Print message to stdout and log about which table is being inserted
+                print("** Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name']  + " - " + item['csv_filename'])
+                logger.info("** Database bulk load query started for " + item['base_filename'] + ": "  + item['table_name'] + " - " + item['csv_filename'])
 
-            # If postgresql build query
-            if self.database_type == "postgresql":
+                # Connect to database if not connected
+                if self._conn == None:
+                    self.connect()
 
                 # Set flag to determine if the query was successful
                 bulk_insert_successful = False
                 bulk_insert_failed_attempts = 0
+                allowed_insert_attempts = 1
                 # Loop until successfull insertion
                 while bulk_insert_successful == False:
 
                     try:
+
+                        # Turn off the foreign key checks
+                        sql = "ALTER TABLE " + item['table_name'] + " DISABLE TRIGGER ALL"
+                        self._cursor.execute(sql)
+
                         # Build the base SQL query
                         sql = "COPY nibrs." + item['table_name'] + " FROM STDIN DELIMITER ',' CSV HEADER"
                         # Check for encoding
+                        # TODO: Due to encoding conversion earlier in sanitizer, this check
+                        # Should not be needed anymore
                         if encoding is not None:
                             sql = sql + " encoding '" + encoding + "'"
                         #self._cursor.copy_from(open(csv_file['csv_file_name'], "r"), csv_file['table_name'], sep = "|", null = "")
                         self._cursor.copy_expert(sql, open(item['csv_full_filepath'], "r"))
 
+                        # Turn on the foreign key checks
+                        sql = "ALTER TABLE " + item['table_name'] + " ENABLE TRIGGER ALL"
+                        self._cursor.execute(sql)
+
+                        # Print message to stdout and log
+                        print("** SUCCESS ** Database bulk load query succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
+                        logger.info("** SUCCESS ** Database bulk load query succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
+
                         # If table was data table, add the table name to inserted data tables
-                        if item['table_name'] in code_table_names and item['table_name'] not in self.inserted_code_tables:
+                        # NOTE: This needs to be fixed because different states have different agencies,
+                        # although some overlap from year file to year file
+                        if item['table_name'] in self.code_table_names and item['table_name'] not in self.inserted_code_tables:
                             self.inserted_code_tables.append(item['table_name'])
                             # Print message to stdout and log
-                            print("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
-                            logger.info("Data table for " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
+                            print("** Code table for " + item['base_filename'] + " inserted to code tables list: "  + item['table_name']  + " - " + item['csv_filename'])
+                            logger.info("** Code table for " + item['base_filename'] + " inserted to code tables list: "  + item['table_name'] + " - " + item['csv_filename'])
 
+                        # Return success
                         return True
 
                     except Exception as e:
                         # Roll back the transaction
                         self._conn.rollback()
+
                         # Increment the failed counter
                         bulk_insert_failed_attempts += 1
-                        print("Database bulk load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
-                        logger.error("Database bulk load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
-                        print("Query string: " + sql)
-                        logger.error("Query string: " + sql)
+                        print("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                        logger.error("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                        print("** Query string: " + sql)
+                        logger.error("** Query string: " + sql)
                         traceback.print_exc()
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -247,11 +267,98 @@ class SQLProcess:
                         traceback_array = traceback.format_exc().splitlines()
 
                         # Return a unsucessful flag
-                        if bulk_insert_failed_attempts > 0:
+                        if bulk_insert_failed_attempts > allowed_insert_attempts:
                             return False
 
-            # If MySQL build query
-            elif self.database_type == "mysql":
+            # If there was a reason not to insert the file to the database
+            else:
+                # If the code table has been inserted already
+                # look for unique records only and attempt insert
+                if item['table_name'] in self.inserted_code_tables or item['table_name'] in self.inserted_agency_tables:
+
+                    # Print message to stdout and log that table will be checked for new records
+                    print("** Code or agency table already inserted into database: " + item['table_name'] + " - " + item['csv_filename'])
+                    logger.info("** Code or agency table already inserted into database: " + item['table_name'] + " - " + item['csv_filename'])
+
+                    try:
+                        # Insert the items at at a time
+                        print("** Checking .csv file for new unique values: " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                        logger.error("** Checking .csv file for new unique values: " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+
+                        # Load the csv_file into list of dictionary
+                        with open(item['csv_filename'], "r") as infile:
+                            csv_obj = [{k: int(v) for k, v in row.items()} for row in csv.DictReader(f, skipinitialspace=True)]
+
+                        new_records = []
+                        for line in csv_obj:
+                            # Check the association of the primary key column for that table
+                            pk = get_primary_key_column_for_table(item['table_name'])
+                            # Check if the value for the primary key value is inseted into table already
+                            record_exists = check_primary_value_exists(line, pk, item['table_name'], args)
+                            # If record not in database, add to list to be inserted
+                            if not record_exists:
+                                new_records.append(csv_ojb)
+
+                        # Write the new unique values into the .csv file and bulk .csv insert
+                        if len(new_records) != 0:
+
+                            # Re-create the .csv file with only unique records
+                            write_new_unique_to_csv(new_records, item, args)
+
+                            # Turn off the foreign key checks
+                            sql = "ALTER TABLE " + item['table_name'] + " DISABLE TRIGGER ALL"
+                            self._cursor.execute(sql)
+
+                            # Build the base SQL query
+                            sql = "COPY nibrs." + item['table_name'] + " FROM STDIN DELIMITER ',' CSV HEADER"
+                            # Check for encoding
+                            # TODO: Due to encoding conversion earlier in sanitizer, this check
+                            # Should not be needed anymore
+                            if encoding is not None:
+                                sql = sql + " encoding '" + encoding + "'"
+                            #self._cursor.copy_from(open(csv_file['csv_file_name'], "r"), csv_file['table_name'], sep = "|", null = "")
+                            self._cursor.copy_expert(sql, open(item['csv_full_filepath'], "r"))
+
+                            # Turn on the foreign key checks
+                            sql = "ALTER TABLE " + item['table_name'] + " ENABLE TRIGGER ALL"
+                            self._cursor.execute(sql)
+
+                            # Print message to stdout and log
+                            print("** SUCCESS ** Database bulk load query of only unique values succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name']  + " - " + item['csv_filename'])
+                            logger.info("** SUCCESS ** Database bulk load query of only unique values succeeded for: " + item['base_filename'] + " inserted to data tables: "  + item['table_name'] + " - " + item['csv_filename'])
+
+                    except Exception as e:
+                        # Roll back the transaction
+                        self._conn.rollback()
+
+                        # Increment the failed counter
+                        bulk_insert_failed_attempts += 1
+                        print("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                        logger.error("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
+                        print("** Query string: " + sql)
+                        logger.error("** Query string: " + sql)
+                        traceback.print_exc()
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
+                        # If the cause was a dupllicate entry error, then try to clean the file
+                        traceback_array = traceback.format_exc().splitlines()
+
+                        # Return a unsucessful flag
+                        if bulk_insert_failed_attempts > allowed_insert_attempts:
+                            return False
+
+                # If the table name is unknown
+                elif item['table_name'] not in self.agency_table_names or item['table_name'] not in self.main_table_names or item['table_name'] not in self.code_table_names:
+                    # Print message to stdout and log about which table is being inserted
+                    print("Unknown table name attempted to insert into database: " + item['table_name'] + " - " + item['csv_filename'])
+                    logger.error("Unknown table name attempted to insert into database: " + item['table_name'] + " - " + item['csv_filename'])
+
+            # Return a successfull message from the database query insert.
+            return True
+
+        # If MySQL build query
+        elif self.database_type == "mysql":
 
                 # Set flag to determine if the query was successful
                 bulk_insert_successful = False
@@ -272,30 +379,23 @@ class SQLProcess:
                         # Return a successfull insertion flag
                         bulk_insert_successful = True
 
-                    except Exception as e:
+                        return True
 
+                    except Exception as e:
                         # Increment the failed counter
                         bulk_insert_failed_attempts += 1
-                        print("Database bulk load query attempt " + str(bulk_insert_failed_attempts) + " failed... " + csv_file_obj['csv_file_name'] + " into table: " + csv_file_obj['table_name'])
-                        logger.error("Database bulk load query attempt " + str(bulk_insert_failed_attempts) + " failed..." + csv_file_obj['csv_file_name'] + " into table: " + csv_file_obj['table_name'])
-                        print("Query string: " + bulk_insert_sql)
-                        logger.error("Query string: " + bulk_insert_sql)
+                        print("** Database bulk load query attempt " + str(bulk_insert_failed_attempts) + " failed... " + csv_file_obj['csv_file_name'] + " into table: " + csv_file_obj['table_name'])
+                        logger.error("** Database bulk load query attempt " + str(bulk_insert_failed_attempts) + " failed..." + csv_file_obj['csv_file_name'] + " into table: " + csv_file_obj['table_name'])
+                        print("** Query string: " + bulk_insert_sql)
+                        logger.error("** Query string: " + bulk_insert_sql)
                         traceback.print_exc()
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                        logger.error("Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
+                        logger.error("** Exception: " + str(exc_type) + " in Filename: " + str(fname) + " on Line: " + str(exc_tb.tb_lineno) + " Traceback: " + traceback.format_exc())
                         # Return a unsucessful flag
                         if bulk_insert_failed_attempts > 8:
                             return False
 
-        # If the table is data table and already inserted
-        else:
-            # Print message to stdout and log about which table is being inserted
-            print("Code table already inserted into database: " + item['table_name'] + " - " + item['csv_filename'])
-            logger.info("Code table already inserted into database: " + item['table_name'] + " - " + item['csv_filename'])
-
-        # Return a successfull message from the database query insert.
-        return True
 
     # Used to retrieve ID by matching fields of values
     def query(self,sql):
@@ -395,62 +495,11 @@ class SQLProcess:
             # records deleted for patent grants
             if call_type == "grant":
                 table_name_array = [
-                    "GRANT",
-                    "INTCLASS_G",
-                    "CPCCLASS_G",
-                    "USCLASS_G",
-                    "INVENTOR_G",
-                    "AGENT_G",
-                    "ASSIGNEE_G",
-                    "APPLICANT_G",
-                    "NONPATCIT_G",
-                    "EXAMINER_G",
-                    "GRACIT_G",
-                    "FORPATCIT_G",
-                    "FOREIGNPRIORITY_G"
-                ]
-            # Records deleted for patent applications
-            elif call_type == "application":
-                table_name_array = [
-                    "APPLICATION",
-                    "INTCLASS_A",
-                    "USCLASS_A",
-                    "CPCCLASS_A",
-                    "FOREIGNPRIORITY_A",
-                    "AGENT_A",
-                    "ASSIGNEE_A",
-                    "INVENTOR_A",
-                    "APPLICANT_A"
-                ]
-
-            # Records deleted for PAIR data
-            elif call_type == "PAIR":
-                table_name_array = [
-                    "TRANSACTION_P",
-                    "ADJUSTMENT_P",
-                    "ADJUSTMENTDESC_P",
-                    "CORRESPONDENCE_P",
-                    "CONTINUITYCHILD_P",
-                    "CONTINUITYPARENT_P",
-                    "EXTENSION_P",
-                    "EXTENSIONDESC_P"
-                ]
-
-            # Records deleted for classifcation data
-            elif call_type == "class":
-                table_name_array = [
-                    "USCLASS_C",
-                    "CPCCLASS_C",
-                    "USCPC_C",
                 ]
 
             # Records deleted for patent litigation data
             elif call_type == "legal":
                 table_name_array = [
-                    "CASE_L",
-                    "PATENT_L",
-                    "ATTORNEY_L",
-                    "PARTY_L"
                 ]
 
             print("Starting to remove previous attempt to process the " + call_type + " file: " + file_name + " in table: NIBRS.STARTED_FILES")
@@ -539,3 +588,47 @@ class SQLProcess:
                 print("-- Found encoding scheme " + encoding + " for .csv file: " + csv_filename)
                 return encoding
             else: return None
+
+    # Get the primary key definitions list
+    def get_primary_key_list(self, args):
+        primary_key_list = {}
+        with open(args['primary_key_list_filename'], "r") as infile:
+            for line in infile:
+                line = line.strip().split(",")
+                table_name = line.pop(0)
+                primary_key_list[table_name] =
+        #print(primary_key_list)
+        return primary_key_list
+
+    # Get the the primary key for a table by table name
+    def get_primary_key_column_for_table(self, table_name):
+        # Look for the table name in primary key list
+        if table_name in self.primary_key_list:
+            keys = self.primary_key_list[table_name]
+            # Check if the key is single column
+            if len(keys) == 1: return keys[0]
+            # Check if the key multiple columns
+            elif len(keys) == 2: return keys[0] + "-" + keys[1]
+        else: return None
+
+    # Check if a value exists for the row
+    def check_primary_value_exists(self, line, pk, table_name, args):
+        # Prepare the query
+        sql = "SELECT " + pk + " FROM " + table_name + " WHERE " + pk + " = '" + line[pk] + "'"
+        # Execute the query
+        self._cursor.execute(sql)
+        # Check the count is true or false.
+        result = self._cursor.fetchone()
+        # Return the exists status
+        if result[0] == 0: return False
+        else: return True
+
+    # Write the new unique records back to original csv file
+    def write_new_unique_to_csv(self, new_records, item, args):
+        # Get the keys for header
+        keys = new_records[0].keys()
+        # Write list items to .csv file
+        with open(item['extract_directory'] + item['csv_filename'], 'w') as outfile:
+            writer = csv.DictWriter(outfile, keys)
+            writer.writeheader()
+            writer.writerows(new_records)

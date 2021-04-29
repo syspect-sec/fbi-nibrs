@@ -1,0 +1,292 @@
+psycopg2.errors.UndefinedTable: relation "nibrs.agency_participation" does not exist
+** I guess I forgot to copy that table in.... :(
+
+===========================================================================
+
+2021-04-26 21:13:11,919 INFO ** Database bulk load query started for AL-1991: cde_agencies - cde_agencies.csv
+** BUT DIDN"T SEE A SUCCESS MESSAGE???
+** MAYBE IT WAS BLOCKED BECAUSE IT WAS INSERTED ALREADY CODE FILE
+
+===========================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_arrestee, line 2: "1991,1614,129882,1,L55P5MOKP,1991-07-20 00:00:00,1,N,27,5,23,F,2,3,R,,,,,,AL-1991"
+
+** Arrest number was missing from nibrs_arrestee table in the comprehensive PG setup file
+
+===========================================================================
+
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type bigint: "AL-1991"
+CONTEXT:  COPY nibrs_arrestee_weapon, line 2, column nibrs_arrestee_weapon_id: "AL-1991"
+
+** Found that the adjustment_req_file did not have a rule to add the `data_year` to the csv file
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_bias_motivation" violates foreign key constraint "nibrs_bias_mot_offense_fk"
+DETAIL:  Key (offense_id)=(137318) is not present in table "nibrs_offense".
+
+** The table `nibrs_offence` will not be populated until after nibrs_bias_motivation since I have not ordered
+** the insertion.  So, for now, disable the foreign key restraint.
+**  NOTE: Should set the main_table_names file to be the order of insertion
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_criminal_act" violates foreign key constraint "nibrs_criminal_act_offense_fk"
+DETAIL:  Key (offense_id)=(133210) is not present in table "nibrs_offense".
+
+** The table `nibrs_criminal_act` will not be populated until after nibrs_bias_motivation since I have not ordered
+** the insertion.  So, for now, disable the foreign key restraint.
+**  NOTE: Should set the main_table_names file to be the order of insertion
+
+===========================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_ethnicity, line 2: "4,M,Multiple,Y,AL-1991"
+
+** hc_flag was missing from nibrs_ethnicity table in the comprehensive PG setup file
+
+===========================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_incident, line 2: "1991,106,130114,86,5L5PPPMKP,,,1991-01-01 00:00:00,,,6,,0,C,1991_01_AL0040000_5L5PPPMKP_INC_NIBRS,,,..."
+
+** Missing column in the setup file table.  Fixed.
+
+===========================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_month, line 2: "1991,85,102,1991,U,,,N,F,,C,1991_01_AL0031300_NIBRS,,,AL-1991"
+
+** the data year column was not removed.  So, sanitizer not working to remove columns
+
+===========================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_offender, line 2: "1991,202610,130114,1,5,19,M,1,,,,,AL-1991"
+
+** Missing column in the setup file table.  Fixed.
+
+===========================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_offense, line 2: "1991,133326,130114,36,C,20,,,,AL-1991"
+
+** Missing column in the setup file table.  Fixed.
+
+===========================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_property, line 2: "1991,154047,129982,7,,,,AL-1991"
+
+** Missing column in the setup file table.  Fixed.
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_property_desc" violates foreign key constraint "nibrs_prop_desc_prop_fk"
+DETAIL:  Key (property_id)=(154047) is not present in table "nibrs_property".
+
+** FK temporarily disabled
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_suspect_using" violates foreign key constraint "nibrs_suspect_using_off_fk"
+DETAIL:  Key (offense_id)=(133326) is not present in table "nibrs_offense".
+
+** FK temporarily disabled
+
+===========================================================================
+
+psycopg2.errors.NumericValueOutOfRange: value "59887" is out of range for type smallint
+CONTEXT:  COPY nibrs_suspected_drug, line 2, column suspected_drug_type_id: "59887"
+
+** Data year was not added to the csv since a rule did not exist in the adjustment_req_file file
+
+===========================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_victim, line 2: "1991,130114,130114,1,4,,,,5,15,F,1,3,R,,,,,AL-1991"
+
+** Missing two columns in the setup file. Fixed
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_victim_circumstances" violates foreign key constraint "nibrs_vic_circ_nibrs_vic_fk"
+DETAIL:  Key (victim_id)=(13578) is not present in table "nibrs_victim".
+
+** Temp disabled foreign key
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_victim_injury" violates foreign key constraint "nibrs_vic_injury_nibrs_vic_fk"
+DETAIL:  Key (victim_id)=(130114) is not present in table "nibrs_victim".
+
+** Temp disabled foreign key
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_victim_offender_rel" violates foreign key constraint "nibrs_victim_off_rel_vic_fk"
+DETAIL:  Key (victim_id)=(130114) is not present in table "nibrs_victim".
+
+** Temp disabled foreign key
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_victim_offense" violates foreign key constraint "nibrs_vic_off_nibrs_vic_fk"
+DETAIL:  Key (victim_id)=(130114) is not present in table "nibrs_victim".
+
+** Temp disabled foreign key
+
+===========================================================================
+
+psycopg2.errors.ForeignKeyViolation: insert or update on table "nibrs_weapon" violates foreign key constraint "nibrs_weap_weap_type_fk"
+DETAIL:  Key (weapon_id)=(12) is not present in table "nibrs_weapon_type".
+
+** Temp disabled foreign key
+
+===========================2019=======================================
+
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type integer: "01-JAN-06"
+CONTEXT:  COPY agencies, line 2, column employee_rate: "01-JAN-06"
+
+
+===========================================================================
+
+
+2021-04-27 21:38:52,431 ERROR Exception: <class 'psycopg2.errors.UniqueViolation'> in Filename: SQLProcessor.py on Line: 226 Traceback: Traceback (most recent call$
+  File "/Users/development/Software/NIBRS/SQLProcessor.py", line 226, in load_csv_bulk_data
+    self._cursor.copy_expert(sql, open(item['csv_full_filepath'], "r"))
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_activity_type_pk"
+DETAIL:  Key (activity_type_id)=(1) already exists.
+CONTEXT:  COPY nibrs_activity_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_age_pk"
+DETAIL:  Key (age_id)=(1) already exists.
+CONTEXT:  COPY nibrs_age, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_arrest_type_pk"
+DETAIL:  Key (arrest_type_id)=(1) already exists.
+CONTEXT:  COPY nibrs_arrest_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_assign_type_pk"
+DETAIL:  Key (assignment_type_id)=(1) already exists.
+CONTEXT:  COPY nibrs_assignment_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_bias_list_pk"
+DETAIL:  Key (bias_id)=(23) already exists.
+CONTEXT:  COPY nibrs_bias_list, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_circumstances_pk"
+DETAIL:  Key (circumstances_id)=(1) already exists.
+CONTEXT:  COPY nibrs_circumstances, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_cleared_except_pk"
+DETAIL:  Key (cleared_except_id)=(1) already exists.
+CONTEXT:  COPY nibrs_cleared_except, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_criminal_act_type_pk"
+DETAIL:  Key (criminal_act_id)=(1) already exists.
+CONTEXT:  COPY nibrs_criminal_act_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_drug_measure_type_pk"
+DETAIL:  Key (drug_measure_type_id)=(1) already exists.
+CONTEXT:  COPY nibrs_drug_measure_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_eth_pk"
+DETAIL:  Key (ethnicity_id)=(4) already exists.
+CONTEXT:  COPY nibrs_ethnicity, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_injury_pk"
+DETAIL:  Key (injury_id)=(1) already exists.
+CONTEXT:  COPY nibrs_injury, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_justifiable_force_pk"
+DETAIL:  Key (justifiable_force_id)=(1) already exists.
+CONTEXT:  COPY nibrs_justifiable_force, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_location_type_pk"
+DETAIL:  Key (location_id)=(1) already exists.
+CONTEXT:  COPY nibrs_location_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_offense_type_pk"
+DETAIL:  Key (offense_type_id)=(58) already exists.
+CONTEXT:  COPY nibrs_offense_type, line 18
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_prop_desc_type_pk"
+DETAIL:  Key (prop_desc_id)=(1) already exists.
+CONTEXT:  COPY nibrs_prop_desc_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_prop_loss_type_pk"
+DETAIL:  Key (prop_loss_id)=(1) already exists.
+CONTEXT:  COPY nibrs_prop_loss_type, line 2
+
+============================================================================
+
+psycopg2.errors.BadCopyFileFormat: extra data after last expected column
+CONTEXT:  COPY nibrs_relationship, line 2: "27,"XR","Victim Was Ex-Relationship (Ex-Boyfriend/Girlfriend)",2,AL-2019"
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_suspected_drug_type_pk"
+DETAIL:  Key (suspected_drug_type_id)=(1) already exists.
+CONTEXT:  COPY nibrs_suspected_drug_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_suspected_using_pk"
+DETAIL:  Key (suspect_using_id)=(1) already exists.
+CONTEXT:  COPY nibrs_using_list, line 2
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_victim_type_pk"
+DETAIL:  Key (victim_type_id)=(1) already exists.
+CONTEXT:  COPY nibrs_victim_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "nibrs_weapon_type_pk"
+DETAIL:  Key (weapon_id)=(21) already exists.
+CONTEXT:  COPY nibrs_weapon_type, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "ref_race_pk"
+DETAIL:  Key (race_id)=(0) already exists.
+CONTEXT:  COPY ref_race, line 2
+
+============================================================================
+
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "ref_state_pk"
+DETAIL:  Key (state_id)=(1) already exists.
+CONTEXT:  COPY ref_state, line 2
+
+============================================================================

@@ -13,10 +13,8 @@ SET check_function_bodies = false;
 SET client_min_messages = warning;
 SET row_security = off;
 
-CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
-
-COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
-
+--CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'nibrs';
 -- -----------------------------------------------------
 -- Create Databse nibrs
 -- -----------------------------------------------------
@@ -24,25 +22,10 @@ COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
 DROP DATABASE IF EXISTS nibrs;
 CREATE DATABASE nibrs;
 
+\c nibrs;
+
 DROP SCHEMA IF EXISTS nibrs CASCADE;
 CREATE SCHEMA IF NOT EXISTS nibrs;
-
--- -----------------------------------------------------
--- Create PostgreSQL Users
--- -----------------------------------------------------
-
--- Drop user if exists and create a new user with password
-DROP USER IF EXISTS nibrs;
-CREATE USER nibrs LOGIN PASSWORD 'Ld58KimTi06v2PnlXTFuLG4';
-
--- Change the owner of uspto database to uspto user
-ALTER DATABASE nibrs OWNER TO nibrs;
-ALTER SCHEMA nibrs OWNER to nibrs;
-ALTER DATABASE nibrs SET search_path TO nibrs;
-
--- Grant privileges to all corresponding databases
-GRANT USAGE ON SCHEMA nibrs TO nibrs;
-GRANT ALL ON ALL TABLES IN SCHEMA nibrs TO nibrs;
 
 -- -----------------------------------------------------
 -- Create Agency Tables
@@ -69,6 +52,8 @@ CREATE TABLE nibrs.agency_participation (
   nibrs_participated integer,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.agency_participation OWNER TO nibrs;
 
 -- This code table is for files before 2016
 CREATE TABLE nibrs.cde_agencies (
@@ -118,6 +103,8 @@ CREATE TABLE nibrs.cde_agencies (
   icpsr_lng numeric,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.cde_agencies OWNER TO nibrs;
 
 -- This code table is for files after 2015
 CREATE TABLE nibrs.agencies (
@@ -183,6 +170,8 @@ CREATE TABLE nibrs.agencies (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.agencies OWNER TO nibrs;
+
 -- -----------------------------------------------------
 -- Create Code Tables
 -- -----------------------------------------------------
@@ -194,12 +183,16 @@ CREATE TABLE nibrs.nibrs_activity_type (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_activity_type OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_age (
   age_id smallint NOT NULL,
   age_code character(2),
   age_name character varying(100),
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_age OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_arrest_type (
   arrest_type_id smallint NOT NULL,
@@ -208,12 +201,16 @@ CREATE TABLE nibrs.nibrs_arrest_type (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_arrest_type OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_assignment_type (
   assignment_type_id smallint NOT NULL,
   assignment_type_code character(1),
   assignment_type_name character varying(100),
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_assignment_type OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_bias_list (
   bias_id smallint NOT NULL,
@@ -223,12 +220,16 @@ CREATE TABLE nibrs.nibrs_bias_list (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_bias_list OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_location_type (
   location_id bigint NOT NULL,
   location_code character(2),
   location_name character varying(100),
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_location_type OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_offense_type (
   offense_type_id bigint NOT NULL,
@@ -243,6 +244,8 @@ CREATE TABLE nibrs.nibrs_offense_type (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_offense_type OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_prop_desc_type (
   prop_desc_id smallint NOT NULL,
   prop_desc_code character(2),
@@ -250,12 +253,16 @@ CREATE TABLE nibrs.nibrs_prop_desc_type (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_prop_desc_type OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_victim_type (
   victim_type_id smallint NOT NULL,
   victim_type_code character(1),
   victim_type_name character varying(100),
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_victim_type OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_circumstances (
   circumstances_id smallint NOT NULL,
@@ -265,6 +272,8 @@ CREATE TABLE nibrs.nibrs_circumstances (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_circumstances OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_cleared_except (
   cleared_except_id smallint NOT NULL,
   cleared_except_code character(1),
@@ -273,12 +282,16 @@ CREATE TABLE nibrs.nibrs_cleared_except (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_cleared_except OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_criminal_act (
   data_year int,
   criminal_act_id smallint NOT NULL,
   offense_id bigint NOT NULL,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_cleared_except OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_criminal_act_type (
   criminal_act_id smallint NOT NULL,
@@ -288,6 +301,8 @@ CREATE TABLE nibrs.nibrs_criminal_act_type (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_criminal_act_type OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_drug_measure_type (
   drug_measure_type_id smallint NOT NULL,
   drug_measure_code character(2),
@@ -295,12 +310,19 @@ CREATE TABLE nibrs.nibrs_drug_measure_type (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_drug_measure_type OWNER TO nibrs;
+
+-- Note: hc_flag is default 'Y'.  It is really only included in OLD files < 1996.
+-- So, it will appear as Y in NEW files.  But, not sure what it really is???
 CREATE TABLE nibrs.nibrs_ethnicity (
   ethnicity_id smallint NOT NULL,
   ethnicity_code character(1),
   ethnicity_name character varying(100),
+  hc_flag character varying(1) DEFAULT 'Y'::character varying,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_ethnicity OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_injury (
   injury_id smallint NOT NULL,
@@ -309,12 +331,16 @@ CREATE TABLE nibrs.nibrs_injury (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_injury OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_justifiable_force (
   justifiable_force_id smallint NOT NULL,
   justifiable_force_code character(1),
   justifiable_force_name character varying(100),
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_justifiable_force OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_prop_loss_type (
   prop_loss_id smallint NOT NULL,
@@ -323,12 +349,16 @@ CREATE TABLE nibrs.nibrs_prop_loss_type (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_prop_loss_type OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_relationship (
   relationship_id smallint NOT NULL,
   relationship_code character(2),
   relationship_name character varying(100),
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_relationship OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_suspected_drug_type (
   suspected_drug_type_id smallint NOT NULL,
@@ -337,6 +367,8 @@ CREATE TABLE nibrs.nibrs_suspected_drug_type (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_suspected_drug_type OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_using_list (
   suspect_using_id smallint NOT NULL,
   suspect_using_code character(1),
@@ -344,6 +376,7 @@ CREATE TABLE nibrs.nibrs_using_list (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_using_list OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_weapon_type (
   weapon_id smallint NOT NULL,
@@ -352,6 +385,8 @@ CREATE TABLE nibrs.nibrs_weapon_type (
   shr_flag character(1),
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_weapon_type OWNER TO nibrs;
 
 CREATE TABLE nibrs.ref_race (
   race_id smallint NOT NULL,
@@ -363,6 +398,8 @@ CREATE TABLE nibrs.ref_race (
   notes character varying(1000),
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.ref_race OWNER TO nibrs;
 
 CREATE TABLE nibrs.ref_state (
   state_id smallint NOT NULL,
@@ -377,6 +414,8 @@ CREATE TABLE nibrs.ref_state (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.ref_state OWNER TO nibrs;
+
 --
 -- Main NIBRS tables
 --
@@ -386,6 +425,7 @@ CREATE TABLE nibrs.nibrs_arrestee (
   arrestee_id bigint NOT NULL,
   incident_id bigint NOT NULL,
   arrestee_seq_num bigint,
+  arrest_num character varying(12),
   arrest_date timestamp without time zone,
   arrest_type_id smallint,
   multiple_indicator character(1),
@@ -398,10 +438,13 @@ CREATE TABLE nibrs.nibrs_arrestee (
   resident_code character(1),
   under_18_disposition_code character(1),
   clearance_ind character(1),
+  ff_line_number bigint,
   age_range_low_num smallint,
   age_range_high_num smallint,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_arrestee OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_arrestee_weapon (
   data_year int,
@@ -411,12 +454,16 @@ CREATE TABLE nibrs.nibrs_arrestee_weapon (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_arrestee_weapon OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_bias_motivation (
   data_year int,
   bias_id int NOT NULL,
   offense_id bigint NOT NULL,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_bias_motivation OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_month (
   data_year int,
@@ -426,8 +473,10 @@ CREATE TABLE nibrs.nibrs_month (
   inc_data_year int,
   reported_status character varying(10),
   report_date timestamp without time zone,
+  prepared_date timestamp without time zone,
   update_flag character(1) DEFAULT 'NULL'::bpchar NOT NULL,
   orig_format character(1) DEFAULT 'NULL'::bpchar NOT NULL,
+  ff_line_number bigint,
   data_home character varying(10),
   ddocname character varying(50),
   did bigint,
@@ -435,14 +484,15 @@ CREATE TABLE nibrs.nibrs_month (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_month OWNER TO nibrs;
 COMMENT ON COLUMN nibrs.nibrs_month.orig_format IS 'This is the format the report was in when it was first submitted to the system.  F for Flat File, W for Web Form, U for IEPDXML Upload, S for IEPDXML Service, B for BPEL, N for null or unavailable, and M for Multiple. When summarizing NIBRS data into the _month tables, a single months data could come from multiple sources.  If so the entry will be M';
-
 
 CREATE TABLE nibrs.nibrs_incident (
 	data_year int,
   agency_id bigint NOT NULL,
   incident_id bigint NOT NULL,
   nibrs_month_id bigint NOT NULL,
+  incident_number character varying(15),
   cargo_theft_flag character(1),
   submission_date timestamp without time zone,
   incident_date timestamp without time zone,
@@ -452,11 +502,14 @@ CREATE TABLE nibrs.nibrs_incident (
   cleared_except_date timestamp without time zone,
   incident_status smallint,
   data_home character(1),
+  ddocname character varying(100),
   orig_format character(1),
+  ff_line_number bigint,
   did bigint,
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_incident OWNER TO nibrs;
 COMMENT ON COLUMN nibrs.nibrs_incident.orig_format IS 'This is the format the report was in when it was first submitted to the system.  F for Flat File, W for Web Form, U for IEPDXML Upload, S for IEPDXML Service, B for BPEL, N for null or unavailable.';
 
 
@@ -470,10 +523,13 @@ CREATE TABLE nibrs.nibrs_offender (
   sex_code character(1),
   race_id smallint,
   ethnicity_id smallint,
+  ff_line_number bigint,
   age_range_low_num smallint,
   age_range_high_num smallint,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_offender OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_offense (
   data_year int,
@@ -484,8 +540,11 @@ CREATE TABLE nibrs.nibrs_offense (
   location_id bigint NOT NULL,
   num_premises_entered smallint,
   method_entry_code character(1),
+  ff_line_number bigint,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_offense OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_property (
 	data_year int,
@@ -493,8 +552,12 @@ CREATE TABLE nibrs.nibrs_property (
   incident_id bigint NOT NULL,
   prop_loss_id smallint NOT NULL,
   stolen_count smallint,
-  recovered_count smallint
+  recovered_count smallint,
+  ff_line_number bigint,
+  source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_property OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_property_desc (
   data_year int,
@@ -506,12 +569,16 @@ CREATE TABLE nibrs.nibrs_property_desc (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_property_desc OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_suspect_using (
   data_year int,
   suspect_using_id smallint NOT NULL,
   offense_id bigint NOT NULL,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_suspect_using OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_suspected_drug (
   data_year int,
@@ -522,6 +589,8 @@ CREATE TABLE nibrs.nibrs_suspected_drug (
   nibrs_suspected_drug_id bigint NOT NULL,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_suspected_drug OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_victim (
   data_year int,
@@ -538,10 +607,14 @@ CREATE TABLE nibrs.nibrs_victim (
   race_id smallint,
   ethnicity_id smallint,
   resident_status_code character(1),
+  agency_data_year smallint,
+  ff_line_number bigint,
   age_range_low_num smallint,
   age_range_high_num smallint,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_victim OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_victim_circumstances (
   data_year int,
@@ -551,12 +624,16 @@ CREATE TABLE nibrs.nibrs_victim_circumstances (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_victim_circumstances OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_victim_injury (
   data_year int,
   victim_id bigint NOT NULL,
   injury_id smallint NOT NULL,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_victim_injury OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_victim_offender_rel (
   data_year int,
@@ -567,12 +644,16 @@ CREATE TABLE nibrs.nibrs_victim_offender_rel (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_victim_offender_rel OWNER TO nibrs;
+
 CREATE TABLE nibrs.nibrs_victim_offense (
   data_year int,
   victim_id bigint NOT NULL,
   offense_id bigint NOT NULL,
   source_code character varying(10)
 );
+
+ALTER TABLE nibrs.nibrs_victim_offense OWNER TO nibrs;
 
 CREATE TABLE nibrs.nibrs_weapon (
   data_year int,
@@ -582,10 +663,14 @@ CREATE TABLE nibrs.nibrs_weapon (
   source_code character varying(10)
 );
 
+ALTER TABLE nibrs.nibrs_weapon OWNER TO nibrs;
+
 CREATE TABLE IF NOT EXISTS nibrs.started_files (
   source_code character varying(10),
   PRIMARY KEY (source_code)
 );
+
+ALTER TABLE nibrs.started_files OWNER TO nibrs;
 
 --Create PKs and FKs
 --PKS
@@ -828,3 +913,22 @@ ALTER TABLE ONLY NIBRS.NIBRS_BIAS_MOTIVATION ADD CONSTRAINT NIBRS_BIAS_MOT_OFFEN
 
 ALTER TABLE ONLY NIBRS.NIBRS_BIAS_MOTIVATION ADD CONSTRAINT NIBRS_BIAS_MOT_LIST_FK FOREIGN KEY (BIAS_ID)
   REFERENCES NIBRS.NIBRS_BIAS_LIST (BIAS_ID);
+
+
+-- -----------------------------------------------------
+-- Create PostgreSQL Users
+-- -----------------------------------------------------
+
+-- Drop user if exists and create a new user with password
+DROP USER IF EXISTS nibrs;
+CREATE USER nibrs LOGIN PASSWORD 'Ld58KimTi06v2PnlXTFuLG4';
+ALTER USER nibrs WITH SUPERUSER;
+
+-- Change the owner of uspto database to uspto user
+ALTER DATABASE nibrs OWNER TO nibrs;
+ALTER SCHEMA nibrs OWNER to nibrs;
+ALTER DATABASE nibrs SET search_path TO nibrs;
+
+-- Grant privileges to all corresponding databases
+GRANT USAGE ON SCHEMA nibrs TO nibrs;
+GRANT ALL ON ALL TABLES IN SCHEMA nibrs TO nibrs;
