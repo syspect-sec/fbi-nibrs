@@ -34987,3 +34987,153 @@ zipfile.BadZipFile: File is not a zip file
 2021-04-29 19:10:06,776 INFO ** Code or agency table already inserted into database: nibrs_criminal_act - nibrs_criminal_act.csv
 2021-04-29 19:10:06,776 ERROR ** Checking .csv file for new unique values: CO-2009... nibrs_criminal_act.csv into table: nibrs_criminal_act
 2021-04-29 19:10:18,404 INFO ** UNIQUE VALUES FOUND ** found for: CO-2009 inserted to data tables: nibrs_criminal_act - nibrs_criminal_act.csv
+2021-04-29 22:09:05,016 INFO -- Validating required file structure...
+2021-04-29 22:09:05,254 INFO Connection to PostgreSQL database established.
+2021-04-29 22:09:05,254 INFO [Checking database for list of all tables...]
+2021-04-29 22:09:05,358 INFO -- Getting list of bulk data urls...
+2021-04-29 22:09:05,358 INFO -- Checking for existing link log file...
+2021-04-29 22:09:05,370 INFO -- 798 existing links log found in log file...
+2021-04-29 22:09:05,371 INFO -- Starting to process list of bulk data urls...
+2021-04-29 22:09:05,371 INFO -- Checking status of link: AL-1991.zip - Unprocessed...
+2021-04-29 22:09:05,371 INFO -- Starting to process link: https://s3-us-gov-west-1.amazonaws.com/cg-d3f0433b-a53e-4934-8b94-c678aa2cbaf3/1991/AL-1991.zip...
+2021-04-29 22:09:05,371 INFO -- Previously downloaded bulk data found: /Users/development/Software/NIBRS/TMP/downloads/AL-1991.zip...
+2021-04-29 22:09:05,371 INFO [ Extracting AL-1991.zip NIBRS .zip file ]
+2021-04-29 22:09:07,666 INFO -- Looking for .csv files in: /Users/development/Software/NIBRS/TMP/downloads/AL-1991/...
+2021-04-29 22:09:07,667 INFO -- Starting to sanitize list of .csv files for item: AL-1991.zip...
+2021-04-29 22:09:07,667 INFO -- Removing duplicates from .csv file: agency_participation.csv
+2021-04-29 22:09:07,667 INFO -- No duplicate columns found in .csv file: agency_participation.csv
+2021-04-29 22:09:07,667 INFO -- Removing duplicates from .csv file: cde_agencies.csv
+2021-04-29 22:09:07,668 INFO -- No duplicate columns found in .csv file: cde_agencies.csv
+2021-04-29 22:09:07,668 INFO -- Removing duplicates from .csv file: nibrs_activity_type.csv
+2021-04-29 22:09:07,668 INFO -- No duplicate columns found in .csv file: nibrs_activity_type.csv
+2021-04-29 22:09:07,668 INFO -- Removing duplicates from .csv file: nibrs_age.csv
+2021-04-29 22:09:07,669 INFO -- No duplicate columns found in .csv file: nibrs_age.csv
+2021-04-29 22:09:07,669 INFO -- Removing duplicates from .csv file: nibrs_arrest_type.csv
+2021-04-29 22:09:07,669 INFO -- No duplicate columns found in .csv file: nibrs_arrest_type.csv
+2021-04-29 22:09:07,669 INFO -- Removing duplicates from .csv file: nibrs_arrestee.csv
+2021-04-29 22:09:07,671 INFO -- No duplicate columns found in .csv file: nibrs_arrestee.csv
+2021-04-29 22:09:07,671 INFO -- Removing duplicates from .csv file: nibrs_arrestee_weapon.csv
+2021-04-29 22:09:07,672 INFO -- No duplicate columns found in .csv file: nibrs_arrestee_weapon.csv
+2021-04-29 22:09:07,672 INFO -- Removing duplicates from .csv file: nibrs_assignment_type.csv
+2021-04-29 22:09:07,672 INFO -- No duplicate columns found in .csv file: nibrs_assignment_type.csv
+2021-04-29 22:09:07,672 INFO -- Removing duplicates from .csv file: nibrs_bias_list.csv
+2021-04-29 22:09:07,672 INFO -- No duplicate columns found in .csv file: nibrs_bias_list.csv
+2021-04-29 22:09:07,673 INFO -- Removing duplicates from .csv file: nibrs_bias_motivation.csv
+2021-04-29 22:09:07,673 INFO -- No duplicate columns found in .csv file: nibrs_bias_motivation.csv
+2021-04-29 22:09:07,673 INFO -- Removing duplicates from .csv file: nibrs_circumstances.csv
+2021-04-29 22:09:07,673 INFO -- No duplicate columns found in .csv file: nibrs_circumstances.csv
+2021-04-29 22:09:07,673 INFO -- Removing duplicates from .csv file: nibrs_cleared_except.csv
+2021-04-29 22:09:07,673 INFO -- No duplicate columns found in .csv file: nibrs_cleared_except.csv
+2021-04-29 22:09:07,673 INFO -- Removing duplicates from .csv file: nibrs_criminal_act.csv
+2021-04-29 22:09:07,674 INFO -- No duplicate columns found in .csv file: nibrs_criminal_act.csv
+2021-04-29 22:09:07,674 INFO -- Removing duplicates from .csv file: nibrs_criminal_act_type.csv
+2021-04-29 22:09:07,675 INFO -- No duplicate columns found in .csv file: nibrs_criminal_act_type.csv
+2021-04-29 22:09:07,675 INFO -- Removing duplicates from .csv file: nibrs_drug_measure_type.csv
+2021-04-29 22:09:07,675 INFO -- No duplicate columns found in .csv file: nibrs_drug_measure_type.csv
+2021-04-29 22:09:07,675 INFO -- Removing duplicates from .csv file: nibrs_ethnicity.csv
+2021-04-29 22:09:07,675 INFO -- No duplicate columns found in .csv file: nibrs_ethnicity.csv
+2021-04-29 22:09:07,675 INFO -- Removing duplicates from .csv file: nibrs_incident.csv
+2021-04-29 22:09:07,820 INFO -- No duplicate columns found in .csv file: nibrs_incident.csv
+2021-04-29 22:09:07,820 INFO -- Removing duplicates from .csv file: nibrs_injury.csv
+2021-04-29 22:09:07,837 INFO -- No duplicate columns found in .csv file: nibrs_injury.csv
+2021-04-29 22:09:07,837 INFO -- Removing duplicates from .csv file: nibrs_justifiable_force.csv
+2021-04-29 22:09:07,837 INFO -- No duplicate columns found in .csv file: nibrs_justifiable_force.csv
+2021-04-29 22:09:07,837 INFO -- Removing duplicates from .csv file: nibrs_location_type.csv
+2021-04-29 22:09:07,837 INFO -- No duplicate columns found in .csv file: nibrs_location_type.csv
+2021-04-29 22:09:07,838 INFO -- Removing duplicates from .csv file: nibrs_month.csv
+2021-04-29 22:09:07,839 INFO -- No duplicate columns found in .csv file: nibrs_month.csv
+2021-04-29 22:09:07,839 INFO -- Removing duplicates from .csv file: nibrs_offender.csv
+2021-04-29 22:09:07,940 INFO -- No duplicate columns found in .csv file: nibrs_offender.csv
+2021-04-29 22:09:07,941 INFO -- Removing duplicates from .csv file: nibrs_offense.csv
+2021-04-29 22:09:08,029 INFO -- No duplicate columns found in .csv file: nibrs_offense.csv
+2021-04-29 22:09:08,029 INFO -- Removing duplicates from .csv file: nibrs_offense_type.csv
+2021-04-29 22:09:08,041 INFO -- No duplicate columns found in .csv file: nibrs_offense_type.csv
+2021-04-29 22:09:08,041 INFO -- Removing duplicates from .csv file: nibrs_prop_desc_type.csv
+2021-04-29 22:09:08,042 INFO -- No duplicate columns found in .csv file: nibrs_prop_desc_type.csv
+2021-04-29 22:09:08,042 INFO -- Removing duplicates from .csv file: nibrs_prop_loss_type.csv
+2021-04-29 22:09:08,042 INFO -- No duplicate columns found in .csv file: nibrs_prop_loss_type.csv
+2021-04-29 22:09:08,042 INFO -- Removing duplicates from .csv file: nibrs_property.csv
+2021-04-29 22:09:08,133 INFO -- No duplicate columns found in .csv file: nibrs_property.csv
+2021-04-29 22:09:08,133 INFO -- Removing duplicates from .csv file: nibrs_property_desc.csv
+2021-04-29 22:09:08,247 INFO -- No duplicate columns found in .csv file: nibrs_property_desc.csv
+2021-04-29 22:09:08,247 INFO -- Removing duplicates from .csv file: nibrs_relationship.csv
+2021-04-29 22:09:08,259 INFO -- No duplicate columns found in .csv file: nibrs_relationship.csv
+2021-04-29 22:09:08,259 INFO -- Removing duplicates from .csv file: nibrs_suspect_using.csv
+2021-04-29 22:09:08,315 INFO -- No duplicate columns found in .csv file: nibrs_suspect_using.csv
+2021-04-29 22:09:08,315 INFO -- Removing duplicates from .csv file: nibrs_suspected_drug.csv
+2021-04-29 22:09:08,325 INFO -- No duplicate columns found in .csv file: nibrs_suspected_drug.csv
+2021-04-29 22:09:08,325 INFO -- Removing duplicates from .csv file: nibrs_suspected_drug_type.csv
+2021-04-29 22:09:08,325 INFO -- No duplicate columns found in .csv file: nibrs_suspected_drug_type.csv
+2021-04-29 22:09:08,326 INFO -- Removing duplicates from .csv file: nibrs_using_list.csv
+2021-04-29 22:09:08,326 INFO -- No duplicate columns found in .csv file: nibrs_using_list.csv
+2021-04-29 22:09:08,326 INFO -- Removing duplicates from .csv file: nibrs_victim.csv
+2021-04-29 22:09:08,407 INFO -- No duplicate columns found in .csv file: nibrs_victim.csv
+2021-04-29 22:09:08,407 INFO -- Removing duplicates from .csv file: nibrs_victim_circumstances.csv
+2021-04-29 22:09:08,427 INFO -- No duplicate columns found in .csv file: nibrs_victim_circumstances.csv
+2021-04-29 22:09:08,427 INFO -- Removing duplicates from .csv file: nibrs_victim_injury.csv
+2021-04-29 22:09:08,439 INFO -- No duplicate columns found in .csv file: nibrs_victim_injury.csv
+2021-04-29 22:09:08,439 INFO -- Removing duplicates from .csv file: nibrs_victim_offender_rel.csv
+2021-04-29 22:09:08,461 INFO -- No duplicate columns found in .csv file: nibrs_victim_offender_rel.csv
+2021-04-29 22:09:08,461 INFO -- Removing duplicates from .csv file: nibrs_victim_offense.csv
+2021-04-29 22:09:08,524 INFO -- No duplicate columns found in .csv file: nibrs_victim_offense.csv
+2021-04-29 22:09:08,524 INFO -- Removing duplicates from .csv file: nibrs_victim_type.csv
+2021-04-29 22:09:08,538 INFO -- No duplicate columns found in .csv file: nibrs_victim_type.csv
+2021-04-29 22:09:08,538 INFO -- Removing duplicates from .csv file: nibrs_weapon.csv
+2021-04-29 22:09:08,553 INFO -- No duplicate columns found in .csv file: nibrs_weapon.csv
+2021-04-29 22:09:08,553 INFO -- Removing duplicates from .csv file: nibrs_weapon_type.csv
+2021-04-29 22:09:08,555 INFO -- No duplicate columns found in .csv file: nibrs_weapon_type.csv
+2021-04-29 22:09:08,555 INFO -- Removing duplicates from .csv file: ref_race.csv
+2021-04-29 22:09:08,556 INFO -- No duplicate columns found in .csv file: ref_race.csv
+2021-04-29 22:09:08,556 INFO -- Removing duplicates from .csv file: ref_state.csv
+2021-04-29 22:09:08,556 INFO -- No duplicate columns found in .csv file: ref_state.csv
+2021-04-29 22:09:08,557 INFO -- PostgreSQL load file found: /Users/development/Software/NIBRS/TMP/downloads/AL-1991/postgres_load.sql
+2021-04-29 22:09:08,557 INFO -- No special encoding found for any files in: AL-1991
+2021-04-29 22:09:08,557 INFO -- Checking adjustment requirements for: agency_participation.csv
+2021-04-29 22:09:08,558 INFO -- Checking adjustment requirements for: cde_agencies.csv
+2021-04-29 22:09:08,559 INFO -- Checking adjustment requirements for: nibrs_activity_type.csv
+2021-04-29 22:09:08,559 INFO -- Checking adjustment requirements for: nibrs_age.csv
+2021-04-29 22:09:08,560 INFO -- Checking adjustment requirements for: nibrs_arrest_type.csv
+2021-04-29 22:09:08,560 INFO -- Checking adjustment requirements for: nibrs_arrestee.csv
+2021-04-29 22:09:08,561 INFO -- Adjustment requirement found for: nibrs_arrestee.csv
+2021-04-29 22:09:08,561 INFO -- Applying adjustments to .csv file: nibrs_arrestee.csv
+2021-04-29 22:09:08,561 INFO -- Found applicable requirement to .csv file: nibrs_arrestee.csv
+2021-04-29 22:09:08,582 INFO -- Adding column data_year to .csv file: nibrs_arrestee.csv
+2021-04-29 22:09:08,607 INFO -- Checking adjustment requirements for: nibrs_arrestee_weapon.csv
+2021-04-29 22:09:08,608 INFO -- Adjustment requirement found for: nibrs_arrestee_weapon.csv
+2021-04-29 22:09:08,608 INFO -- Applying adjustments to .csv file: nibrs_arrestee_weapon.csv
+2021-04-29 22:09:08,608 INFO -- Found applicable requirement to .csv file: nibrs_arrestee_weapon.csv
+2021-04-29 22:09:08,612 INFO -- Adding column data_year to .csv file: nibrs_arrestee_weapon.csv
+2021-04-29 22:09:08,621 INFO -- Checking adjustment requirements for: nibrs_assignment_type.csv
+2021-04-29 22:09:08,622 INFO -- Checking adjustment requirements for: nibrs_bias_list.csv
+2021-04-29 22:09:08,622 INFO -- Adjustment requirement found for: nibrs_bias_list.csv
+2021-04-29 22:09:08,622 INFO -- Applying adjustments to .csv file: nibrs_bias_list.csv
+2021-04-29 22:09:08,622 INFO -- Found applicable requirement to .csv file: nibrs_bias_list.csv
+2021-04-29 22:09:08,623 INFO -- Adding column bias_desc to .csv file: nibrs_bias_list.csv
+2021-04-29 22:09:08,623 INFO -- Checking adjustment requirements for: nibrs_bias_motivation.csv
+2021-04-29 22:09:08,624 INFO -- Adjustment requirement found for: nibrs_bias_motivation.csv
+2021-04-29 22:09:08,624 INFO -- Applying adjustments to .csv file: nibrs_bias_motivation.csv
+2021-04-29 22:09:08,624 INFO -- Found applicable requirement to .csv file: nibrs_bias_motivation.csv
+2021-04-29 22:09:08,624 INFO -- Adding column data_year to .csv file: nibrs_bias_motivation.csv
+2021-04-29 22:09:08,625 INFO -- Checking adjustment requirements for: nibrs_circumstances.csv
+2021-04-29 22:09:08,625 INFO -- Checking adjustment requirements for: nibrs_cleared_except.csv
+2021-04-29 22:09:08,625 INFO -- Adjustment requirement found for: nibrs_cleared_except.csv
+2021-04-29 22:09:08,625 INFO -- Applying adjustments to .csv file: nibrs_cleared_except.csv
+2021-04-29 22:09:08,626 INFO -- Found applicable requirement to .csv file: nibrs_cleared_except.csv
+2021-04-29 22:09:08,626 INFO -- Adding column cleared_except_desc to .csv file: nibrs_cleared_except.csv
+2021-04-29 22:09:08,626 INFO -- Checking adjustment requirements for: nibrs_criminal_act.csv
+2021-04-29 22:09:08,627 INFO -- Adjustment requirement found for: nibrs_criminal_act.csv
+2021-04-29 22:09:08,627 INFO -- Applying adjustments to .csv file: nibrs_criminal_act.csv
+2021-04-29 22:09:08,627 INFO -- Found applicable requirement to .csv file: nibrs_criminal_act.csv
+2021-04-29 22:09:08,634 INFO -- Adding column data_year to .csv file: nibrs_criminal_act.csv
+2021-04-29 22:09:08,652 INFO -- Checking adjustment requirements for: nibrs_criminal_act_type.csv
+2021-04-29 22:09:08,653 INFO -- Adjustment requirement found for: nibrs_criminal_act_type.csv
+2021-04-29 22:09:08,653 INFO -- Applying adjustments to .csv file: nibrs_criminal_act_type.csv
+2021-04-29 22:09:08,653 INFO -- Found applicable requirement to .csv file: nibrs_criminal_act_type.csv
+2021-04-29 22:09:08,654 INFO -- Adding column criminal_act_desc to .csv file: nibrs_criminal_act_type.csv
+2021-04-29 22:09:08,654 INFO -- Checking adjustment requirements for: nibrs_drug_measure_type.csv
+2021-04-29 22:09:08,655 INFO -- Checking adjustment requirements for: nibrs_ethnicity.csv
+2021-04-29 22:09:08,656 INFO -- Checking adjustment requirements for: nibrs_incident.csv
+2021-04-29 22:09:08,657 INFO -- Adjustment requirement found for: nibrs_incident.csv
+2021-04-29 22:09:08,657 INFO -- Applying adjustments to .csv file: nibrs_incident.csv
+2021-04-29 22:09:08,657 INFO -- Found applicable requirement to .csv file: nibrs_incident.csv
+2021-04-29 22:09:10,227 INFO -- Adding column data_year to .csv file: nibrs_incident.csv

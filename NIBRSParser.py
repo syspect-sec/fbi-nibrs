@@ -109,6 +109,22 @@ def get_link_list_from_log(args):
     # Return the list of links
     return link_list
 
+# Validate the file structure and create any
+# required files that are missing
+def validate_file_structure(args):
+    # Include logger
+    logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+    logger.info("-- Validating required file structure...")
+    print("-- Validating required file structure...")
+    # Create all required directories
+    for dir in args['required_dirs']:
+        if not os.path.exists(args['cwd'] + dir):
+            os.mkdir(args['cwd'] + dir)
+    # Create all required directories
+    for file in args['required_files']:
+        if not os.path.exists(args['cwd'] + file):
+            os.mkdir(args['cwd'] + file)
+
 # Write new link list to log file
 def write_link_list_to_log(link_list, args):
     # Include logger
@@ -426,6 +442,19 @@ if __name__ == "__main__":
         "url_ext" : [
             "cg-d4b776d0-d898-4153-90c8-8336f86bdfec",
             "cg-d3f0433b-a53e-4934-8b94-c678aa2cbaf3",
+        ],
+        # Files that need to be created when the parser starts
+        "required_dirs" : [
+            "LOG",
+            "RES",
+            "TMP",
+            "TMP/downloads",
+            "LOG"
+        ],
+        "required_files" : [
+            "LOG/NIBRS_app.log",
+            "LOG/NIBRS_csv.log",
+            "LOG/NIBRS_links.log"
         ]
     }
 
@@ -433,6 +462,9 @@ if __name__ == "__main__":
     NIBRSLogger.setup_logger(args['log_level'], app_log_file)
     # Include logger
     logger = NIBRSLogger.logging.getLogger("NIBRS_Database_Construction")
+
+    # Validate the file structure
+    validate_file_structure(args)
 
     # Create a database connection
     db_conn = SQLProcessor.SQLProcess(database_args, args)
