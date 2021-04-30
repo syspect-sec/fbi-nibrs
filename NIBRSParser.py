@@ -140,8 +140,31 @@ def write_link_list_to_log(link_list, args):
     print("-- Finished writing list of bulk data urls to log file...")
 
 # Mark the link url as processed in log file
-def check_entire_link_is_processed(link, args):
-    pass
+def check_entire_link_is_processed(base_filename, args):
+    # Open the links log file and get links with base_filename
+    links = []
+    with open(args['csv_log_file'], "r") as infile:
+        contents = infile.readlines()
+    for line in contents:
+        if base_filename in line:
+            links.append(line)
+    # Loop through all found links
+    all_processed = True
+    for link in links:
+        link = link.split(",")
+        # If any unprocessed link found, mark that
+        if link[-1] == "Unprocessed": all_processed = False
+    # If all csv files processed
+    if all_processed == True:
+        # Read in links log file
+        with open(args['link_log_file'], "r") as infile:
+            contents = infile.readlines()
+        # Write out links log file
+        with open(args['link_log_file'], "w") as outfile:
+            for link in contents:
+                if base_filename in link:
+                    link.replace("Unprocessed", "Processed")
+                outfile.write(link)
 
 # Get a list of all links
 def get_link_list(args):
@@ -332,6 +355,9 @@ def process_all_links(links_list, args):
     logger.info("-- Starting to process list of bulk data urls...")
     print("-- Starting to process list of bulk data urls...")
 
+    # Set a var to keep track of when link file changes
+    current_link = None
+
     for link in link_list:
 
         # Get a filename and destination extracted data directory for link
@@ -350,6 +376,7 @@ def process_all_links(links_list, args):
         # Check if file donwloaded already
         if link['status'] == "Unprocessed":
 
+
             logger.info("-- Starting to process link: " + link['url'] + "...")
             print("-- Starting to process link: " + link['url'] + "...")
             extract_success = download_and_extract_single_link(link, args)
@@ -361,14 +388,21 @@ def process_all_links(links_list, args):
                 link = NIBRSSanitizer.sanitize_csv_files(link, args)
                 # Insert all .csv to database
                 insert_item_into_database(link, args)
-                # If database insertion success fix csv file log
-                check_entire_link_is_processed(link, args)
+                # Set the current link
+                if current_link is None: current_link = link['base_filename']
+                elif link['base_filename'] != current_link:
+                    # If database insertion success fix csv file log
+                    check_entire_link_is_processed(current_link, args)
+                    # Set the new current link
+                    current_link = link['base_filename']
+
             else:
                 logger.info("-- Failed to download and extract link: " + link['url'] + "...")
                 print("-- Failed to download and extract link: " + link['url'] + "...")
         else:
             logger.info("-- Skipping previously processed link: " + link['url'] + "...")
             print("-- Skipping previously processed link: " + link['url'] + "...")
+
 
 #
 # Main Function

@@ -215,7 +215,6 @@ class SQLProcess:
                 while bulk_insert_successful == False:
 
                     try:
-
                         # Turn off the foreign key checks
                         sql = "ALTER TABLE " + item['table_name'] + " DISABLE TRIGGER ALL"
                         self._cursor.execute(sql)
@@ -259,7 +258,9 @@ class SQLProcess:
                     except Exception as e:
                         # Roll back the transaction
                         self._conn.rollback()
-
+                        # Turn on the foreign key checks
+                        sql = "ALTER TABLE " + item['table_name'] + " ENABLE TRIGGER ALL"
+                        self._cursor.execute(sql)
                         # Increment the failed counter
                         bulk_insert_failed_attempts += 1
                         print("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
@@ -364,7 +365,9 @@ class SQLProcess:
                         except Exception as e:
                             # Roll back the transaction
                             self._conn.rollback()
-
+                            # Turn on the foreign key checks
+                            sql = "ALTER TABLE " + item['table_name'] + " ENABLE TRIGGER ALL"
+                            self._cursor.execute(sql)
                             # Increment the failed counter
                             bulk_insert_failed_attempts += 1
                             print("** FAILED ** Database item by item load query failed for " + item['base_filename'] + "... " + item['csv_filename'] + " into table: " + item['table_name'])
