@@ -399,19 +399,3 @@ def apply_adjustments(csv_file, adjustments, item, args):
                     csv_writer.writerow(line)
                     #line = ",".join(line) + "\n"
                     #outfile.write(line)
-
-
-# Check the functions
-if __name__ == "__main__":
-
-    #item = {}
-    #item['csv_files'] = [
-        #"/Users/development/Software/NIBRS/TMP/downloads/AZ-2015/nibrs_month.csv",
-        #"/Users/development/Software/NIBRS/TMP/downloads/AZ-2019/AZ/nibrs_month.csv"
-    #]
-    #remove_duplicate_columns(item)
-
-    item = {}
-    item['extract_directory'] = "/Users/development/Software/NIBRS/RES/installation/"
-    item['state_code'] = "AZ"
-    get_file_encoding(item)
